@@ -272,7 +272,7 @@ function notify(msg){const d=document.createElement('div');d.className='toast';d
 // ───────── Pine 常用語法子集：自行解析逐根執行（不使用 eval） ─────────
 function pineCompile(code){
  const lines=[];let buf=null;
- code.replace(/\r/g,'').split('\n').forEach((raw,n)=>{
+ code.replace(/\r|\uFEFF/g,'').split('\n').forEach((raw,n)=>{
   const toks=[],re=/\s*(?:(\/\/.*)|("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')|(#[0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?)|(\d+\.?\d*(?:e-?\d+)?|\.\d+)|([A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*)|(:=|\+=|-=|\*=|\/=|==|!=|<=|>=|=>|[-+*\/%<>=?:,()\[\]])|(\S))/y;
   let m;while((m=re.exec(raw))){if(m[1])break;if(m[7])throw Error(`第 ${n+1} 行：無法辨識的字元 ${m[7]}`);
    if(m[2])toks.push({k:'str',v:m[2].slice(1,-1)});else if(m[3])toks.push({k:'str',v:m[3]});else if(m[4])toks.push({k:'num',v:+m[4]});else if(m[5])toks.push({k:'id',v:m[5]});else toks.push({k:'op',v:m[6]})}
@@ -280,7 +280,7 @@ function pineCompile(code){
   const indent=raw.match(/^[ \t]*/)[0].replace(/\t/g,'    ').length;
   if(buf)buf.toks.push(...toks);else buf={indent,toks,no:n+1};
   const depth=buf.toks.reduce((d,t)=>d+(t.k==='op'?('(['.includes(t.v)?1:')]'.includes(t.v)?-1:0):0),0),last=buf.toks.at(-1);
-  if(depth>0||(last.k==='op'&&!')]'.includes(last.v))||['and','or'].includes(last.v))return;
+  if(depth>0||(last.k==='op'&&!')]'.includes(last.v)&&last.v!=='=>')||['and','or'].includes(last.v))return;
   lines.push(buf);buf=null;
  });
  if(buf)lines.push(buf);
@@ -306,14 +306,42 @@ function pineCompile(code){
   const end=s=>{if(p<t.length)err(`多出的內容 ${t[p].v}`);return s};
   if(is('if')){p++;const node={o:'if',c:expr(),no:L.no};end();node.a=body(L.indent);
    if(lines[li]&&lines[li].indent===L.indent&&lines[li].toks[0].v==='else'){const E=lines[li];if(E.toks[1]?.v==='if'){E.toks=E.toks.slice(1);node.b=[parseStmt()]}else{li++;node.b=body(L.indent)}}return node}
-  if(t.some(x=>x.k==='op'&&x.v==='=>'))err('不支援自訂函式 =>');
+  const arrow=t.findIndex(x=>x.k==='op'&&x.v==='=>');
+  if(arrow>=0){
+   if(L.indent||t[0].k!=='id'||t[1]?.v!=='('||t[arrow-1]?.v!==')')err('函式寫法不支援');
+   const params=[];let seg=[];for(const x of t.slice(2,arrow-1)){if(x.v===','){params.push(seg);seg=[]}else seg.push(x)}if(seg.length)params.push(seg);
+   if(params.some(g=>g.some(x=>x.v==='=')))err('函式參數不支援預設值');
+   const node={o:'func',name:t[0].v,params:params.map(g=>g.at(-1).v),no:L.no};
+   if(arrow===t.length-1)node.body=body(L.indent);else{p=arrow+1;node.body=[end({o:'expr',e:expr(),no:L.no})]}
+   return node}
   let isVar=false;if(is('var')||is('varip')){isVar=true;p++}
   if(t[p]?.k==='id'&&['int','float','bool','string','color','series','simple','const'].includes(t[p].v)&&t[p+1]?.k==='id')p++;
   if(is('[')){const save=p++;const names=[];while(t[p]?.k==='id'){names.push(t[p++].v);if(is(','))p++}if(is(']')&&t[p+1]?.v==='='){p+=2;return end({o:'destr',names,e:expr(),no:L.no})}p=save}
   if(t[p]?.k==='id'&&['=',':=','+=','-=','*=','/='].includes(t[p+1]?.v)&&t[p+1].k==='op'){const name=t[p].v,op=t[p+1].v;p+=2;return end({o:'set',name,op,isVar,e:expr(),no:L.no})}
   return end({o:'expr',e:expr(),no:L.no});
  }
- return parseBlock(lines[0]?.indent||0);
+ return pineExpand(parseBlock(lines[0]?.indent||0));
+}
+function pineExpand(ast){
+ const funcs=new Map();let seq=0;
+ const locals=(list,set)=>list.forEach(s=>{if(s.o==='set'&&s.op==='=')set.add(s.name);if(s.o==='destr')s.names.forEach(n=>set.add(n));if(s.o==='if'){locals(s.a,set);locals(s.b||[],set)}});
+ const walk=(n,map,depth)=>{
+  if(Array.isArray(n))return n.map(x=>walk(x,map,depth));
+  if(!n||typeof n!=='object')return n;
+  const o={};for(const k in n)o[k]=k==='named'?Object.fromEntries(Object.entries(n[k]).map(([a,b])=>[a,walk(b,map,depth)])):typeof n[k]==='object'&&k!=='names'?walk(n[k],map,depth):n[k];
+  if(map){if((o.o==='id'||o.o==='set')&&map.has(o.name))o.name=map.get(o.name);if(o.o==='destr')o.names=o.names.map(x=>map.get(x)||x)}
+  const f=o.o==='call'&&funcs.get(o.name);if(!f)return o;
+  if(depth>8)throw Error(`第 ${o.no} 行：函式呼叫層數過多`);
+  if(o.args.length!==f.params.length||Object.keys(o.named).length)throw Error(`第 ${o.no} 行：${o.name} 的參數數量不符`);
+  const names=new Set(f.params);locals(f.body,names);const tag='@'+(++seq),m=new Map([...names].map(x=>[x,x+tag]));
+  const body=walk(f.body,m,depth+1),last=body.pop();
+  const ret=last.o==='expr'?last.e:last.o==='set'?(body.push(last),{o:'id',name:last.name,no:last.no}):null;
+  if(!ret)throw Error(`第 ${o.no} 行：函式 ${o.name} 最後一行必須是回傳值`);
+  return{o:'ucall',pre:f.params.map((x,j)=>({o:'set',name:m.get(x),op:'=',e:o.args[j],no:o.no})),body,ret,no:o.no};
+ };
+ const out=[];
+ for(const s of ast){if(s.o==='func')funcs.set(s.name,s);else out.push(walk(s,null,0))}
+ return out;
 }
 const PCOL={aqua:'#00bcd4',black:'#363a45',blue:'#2962ff',fuchsia:'#e040fb',gray:'#787b86',green:'#4caf50',lime:'#00e676',maroon:'#880e4f',navy:'#311b92',olive:'#808000',orange:'#ff9800',purple:'#9c27b0',red:'#f23645',silver:'#b2b5be',teal:'#089981',white:'#ffffff',yellow:'#fdd835'};
 function pineRun(ast,data,info){
@@ -326,14 +354,14 @@ function pineRun(ast,data,info){
  const win=(h,n)=>{if(!(n>=1)||i-n+1<0)return null;const a=[];for(let j=i-n+1;j<=i;j++){if(h[j]===undefined||na(h[j]))return null;a.push(h[j])}return a};
  const mean=a=>a.reduce((p,c)=>p+c,0)/a.length;
  const smooth=(s,key,v,n,alpha)=>{const o=s[key]||(s[key]={h:[],r:[]});o.h[i]=v;let prev=NaN;for(let j=i-1;j>=0;j--)if(o.r[j]!==undefined){prev=o.r[j];break}
-  let r;if(na(prev)){const w=win(o.h,n);r=w?mean(w):NaN}else r=na(v)?prev:alpha*v+(1-alpha)*prev;return o.r[i]=r};
+  let r;if(na(prev)){if(key.startsWith('~'))r=v;else{const w=win(o.h,n);r=w?mean(w):NaN}}else r=na(v)?prev:alpha*v+(1-alpha)*prev;return o.r[i]=r};
  const stdev=a=>{const m=mean(a);return Math.sqrt(a.reduce((p,c)=>p+(c-m)**2,0)/a.length)};
  const tr=()=>i?Math.max(data[i].high-data[i].low,Math.abs(data[i].high-data[i-1].close),Math.abs(data[i].low-data[i-1].close)):data[i].high-data[i].low;
  function ev(n){
   switch(n.o){
   case'lit':return n.v;
   case'id':{const k=n.name;if(vars.has(k))return vars.get(k)[i];if(k in bi)return bi[k](i);if(k==='true')return true;if(k==='false')return false;if(k==='na')return NaN;
-   if(k.startsWith('color.')&&PCOL[k.slice(6)])return PCOL[k.slice(6)];if(/^(shape|location|size|plot|hline|display)\./.test(k))return k;if(k==='ta.tr')return tr();if(k==='syminfo.ticker')return info.sym;
+   if(k.startsWith('color.')&&PCOL[k.slice(6)])return PCOL[k.slice(6)];if(/^(shape|location|size|plot|hline|display)\./.test(k))return k;if(k==='ta.tr'||k==='tr')return tr();if(PCOL[k])return PCOL[k];if(k==='columns'||k==='histogram')return'plot.style_'+k;if(k==='syminfo.ticker')return info.sym;
    if(k==='barstate.islast')return i===N-1;if(k==='barstate.isconfirmed')return i<N-1;throw Error(`第 ${n.no} 行：未定義或不支援「${k}」`)}
   case'hist':{const k=Math.round(ev(n.n));if(n.a.o==='id'){const nm=n.a.name,h=vars.get(nm);const s=state(n);if(h)return i-k>=0?h[i-k]??NaN:NaN;if(nm in bi)return i-k>=0?bi[nm](i-k):NaN}const s=state(n);s.h[i]=ev(n.a);return i-k>=0?s.h[i-k]??NaN:NaN}
   case'neg':return -ev(n.a);
@@ -341,17 +369,21 @@ function pineRun(ast,data,info){
   case'tern':{const c=truth(ev(n.c)),a=ev(n.a),b=ev(n.b);return c?a:b}
   case'bin':{const a=ev(n.a),b=ev(n.b);switch(n.op){case'+':return a+b;case'-':return a-b;case'*':return a*b;case'/':return b===0?NaN:a/b;case'%':return a%b;case'<':return a<b;case'>':return a>b;case'<=':return a<=b;case'>=':return a>=b;case'==':return a===b;case'!=':return !na(a)&&!na(b)&&a!==b;case'and':return truth(a)&&truth(b);case'or':return truth(a)||truth(b)}}
   case'tuple':return n.items.map(ev);
+  case'ucall':run(n.pre);run(n.body);return ev(n.ret);
   case'call':return call(n);
   }
  }
  const truth=v=>!na(v)&&!!v;
  function call(n){
-  const f=n.name,arg=(k,name,def)=>n.named[name]?ev(n.named[name]):n.args[k]?ev(n.args[k]):def;
+  let f=n.name;if(f==='study')f='indicator';else if(/^(sma|ema|rma|wma|rsi|atr|stdev|highest|lowest|change|crossover|crossunder|cross|pivothigh|pivotlow|macd)$/.test(f))f='ta.'+f;else if(/^(abs|max|min)$/.test(f))f='math.'+f;
+  const arg=(k,name,def)=>n.named[name]?ev(n.named[name]):n.args[k]?ev(n.args[k]):def;
   if(f==='indicator'){out.title=String(arg(0,'title','指標'));out.overlay=truth(arg(2,'overlay',false));return}
   if(f==='input'||/^input\.(int|float|bool|string|source|color|timeframe)$/.test(f)){
-   const dn=n.named.defval||n.args[0],key=String(arg(1,'title',`參數（第 ${n.no} 行）`)),def=ev(dn);
+   const dn=n.named.defval||n.args[0],def=ev(dn);const st=state(n);
+   if(!st.key){const title=String(arg(1,'title',`參數（第 ${n.no} 行）`)),group=n.named.group?ev(n.named.group)+'｜':'';let k=group+title;for(let c=2;out.inputs.has(k);c++)k=`${group}${title} (${c})`;st.key=k}
+   const key=st.key;
    const isSrc=f==='input.source'||(f==='input'&&dn.o==='id'&&['open','high','low','close','hl2','hlc3','ohlc4'].includes(dn.name));
-   const type=isSrc?'source':f==='input'?(typeof def==='boolean'?'bool':typeof def==='number'?'float':/^#/.test(def)?'color':'string'):f.slice(6);
+   const type=isSrc?'source':f==='input'?(typeof def==='boolean'?'bool':typeof def==='number'?(Number.isInteger(def)?'int':'float'):/^#/.test(def)?'color':'string'):f.slice(6);
    if(!out.inputs.has(key)){const meta={type,def:isSrc?dn.name:def};if(n.named.options)meta.options=ev(n.named.options);if(type==='int'||type==='float'){meta.min=n.named.minval?ev(n.named.minval):n.args[2]?ev(n.args[2]):undefined;meta.max=n.named.maxval?ev(n.named.maxval):n.args[3]?ev(n.args[3]):undefined}out.inputs.set(key,meta)}
    const v=info.params?.in?.[key];if(v===undefined)return def;
    if(isSrc)return v in bi?bi[v](i):def;
@@ -374,7 +406,7 @@ function pineRun(ast,data,info){
    const push=(v,h=s.h)=>(h[i]=v,h);
    switch(k){
    case'sma':{const w=win(push(a[0]),a[1]);return w?mean(w):NaN}
-   case'ema':return smooth(s,'e',a[0],a[1],2/(a[1]+1));
+   case'ema':return smooth(s,'~e',a[0],a[1],2/(a[1]+1));
    case'rma':return smooth(s,'e',a[0],a[1],1/a[1]);
    case'wma':{const w=win(push(a[0]),a[1]);return w?w.reduce((p,c,j)=>p+c*(j+1),0)/(w.length*(w.length+1)/2):NaN}
    case'stdev':{const w=win(push(a[0]),a[1]);return w?stdev(w):NaN}
@@ -382,9 +414,9 @@ function pineRun(ast,data,info){
    case'change':{const h=push(a[0]),m=a[1]??1;return i>=m?h[i]-h[i-m]:NaN}
    case'rsi':{const h=push(a[0]),c=i?h[i]-h[i-1]:NaN,u=smooth(s,'u',na(c)?NaN:Math.max(c,0),a[1],1/a[1]),d=smooth(s,'d',na(c)?NaN:Math.max(-c,0),a[1],1/a[1]);return na(u)?NaN:d===0?100:100-100/(1+u/d)}
    case'atr':return smooth(s,'e',tr(),a[0],1/a[0]);
-   case'crossover':case'crossunder':{const x=push(a[0]),y=push(a[1],s.h2);if(!i)return false;return k==='crossover'?x[i]>y[i]&&x[i-1]<=y[i-1]:x[i]<y[i]&&x[i-1]>=y[i-1]}
+   case'cross':case'crossover':case'crossunder':{const x=push(a[0]),y=push(a[1],s.h2);if(!i)return false;if(k==='cross')return(x[i]>y[i]&&x[i-1]<=y[i-1])||(x[i]<y[i]&&x[i-1]>=y[i-1]);return k==='crossover'?x[i]>y[i]&&x[i-1]<=y[i-1]:x[i]<y[i]&&x[i-1]>=y[i-1]}
    case'pivothigh':case'pivotlow':{const hi=k==='pivothigh',two=a.length<3,src=two?(hi?data[i].high:data[i].low):a[0],[l,r]=two?a:a.slice(1),w=win(push(src),l+r+1);if(!w)return NaN;const c=w[l];return w.every((v,j)=>j===l||(hi?(j<l?v<=c:v<c):(j<l?v>=c:v>c)))?c:NaN}
-   case'macd':{const[src,fa,sl,sg]=a,m=smooth(s,'f',src,fa,2/(fa+1))-smooth(s,'s',src,sl,2/(sl+1)),si=smooth(s,'g',m,sg,2/(sg+1));return[m,si,m-si]}
+   case'macd':{const[src,fa,sl,sg]=a,m=smooth(s,'~f',src,fa,2/(fa+1))-smooth(s,'~s',src,sl,2/(sl+1)),si=smooth(s,'~g',m,sg,2/(sg+1));return[m,si,m-si]}
    case'bb':{const w=win(push(a[0]),a[1]);if(!w)return[NaN,NaN,NaN];const m=mean(w),d=stdev(w)*a[2];return[m,m+d,m-d]}
    }
   }
@@ -399,7 +431,7 @@ function pineRun(ast,data,info){
   else if(s.o==='if')run(truth(ev(s.c))?s.a:s.b||[]);
   else ev(s.e);
  }};
- const persistent=new Set(),scan=l=>l.forEach(s=>{if(s.isVar)persistent.add(s.name);if(s.o==='if'){scan(s.a);scan(s.b||[])}});scan(ast);
+ const persistent=new Set(),scan=n=>{if(!n||typeof n!=='object')return;if(n.o==='set'&&n.isVar)persistent.add(n.name);Object.values(n).forEach(scan)};scan(ast);
  const t0=Date.now();
  for(i=0;i<N;i++){for(const k of persistent){const h=vars.get(k);if(h&&i)h[i]=h[i-1]}run(ast);if(Date.now()-t0>3000)throw Error('執行超過 3 秒，已停止')}
  return out;
@@ -451,9 +483,18 @@ class Pane{
    this.prec=prec;this.render();
    this.chart.priceScale('right').applyOptions({autoScale:true});
    this.chart.timeScale().setVisibleLogicalRange({from:this.data.length-140,to:this.data.length+8});
-   this.startWS(gen);
+   this.startWS(gen);this.backfill(gen,q);
   }catch(e){if(gen===this.gen){this.msg=`載入失敗：${e.message}（確認代號與網路，5 秒後重試）`;setTimeout(()=>{if(gen===this.gen)this.load()},5000)}}
   if(gen===this.gen){this.busy=false;this.info()}
+ }
+ async backfill(gen,q){
+  let rows=[],after=(this.data[0].time-28800)*1000;
+  for(let k=0;k<15&&gen===this.gen;k++){
+   try{const more=await api(`history-candles?${q}&limit=100&after=${after}`);if(!more.length)break;rows=rows.concat(more);after=more.at(-1)[0]}catch{break}
+   await new Promise(r=>setTimeout(r,120));
+  }
+  if(gen!==this.gen||!rows.length)return;
+  const ts=this.chart.timeScale(),r=ts.getVisibleLogicalRange(),n=this.data.length;this.merge(rows.map(parse));this.render();const add=this.data.length-n;if(r&&!this.replay)ts.setVisibleLogicalRange({from:r.from+add,to:r.to+add});
  }
  merge(list){const m=new Map(this.data.map(d=>[d.time,d]));list.forEach(d=>m.set(d.time,d));this.data=[...m.values()].sort((a,b)=>a.time-b.time)}
  async older(){
@@ -888,7 +929,7 @@ function runScripts(pane,d){
  }
  pane.candle.setMarkers(markers.sort((a,b)=>a.time-b.time));
  pane.scriptMsg=errors.join('；');
- if($('#ed').classList.contains('show'))$('#edMsg').textContent=panes.map(p=>p.scriptMsg).find(Boolean)||'';
+ const em=panes.map(p=>p.scriptMsg).find(Boolean);if(em&&$('#ed').classList.contains('show'))$('#edMsg').textContent=em;
 }
 const saveScripts=()=>{store.set('scripts',scripts);store.set('onchart',onchart);store.set('params',params)};
 const rerender=()=>panes.forEach(p=>p.render());
