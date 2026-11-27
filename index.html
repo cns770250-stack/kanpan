@@ -89,7 +89,7 @@ const TF={'1m':60,'5m':300,'15m':900,'30m':1800,'1H':3600,'4H':14400,'1Dutc':864
 const MA={m7:[7,'#f6c343'],m21:[21,'#29b6f6'],m60:[60,'#ab47bc'],m200:[200,'#ef5350']};
 const syncMA=()=>Object.keys(MA).forEach((k,i)=>MA[k][0]=cfg['p'+(i+1)]);
 const ind=store.get('ind',{m7:1,m21:1,m60:1,m200:1,bb:0,vol:1});
-let drawings=store.get('draw',{}), tool='', history_=[], magnet=false, locked=false, hidden=false, sel=null, active=0;
+let drawings=store.get('draw',{}), tool='', history_=[], magnet=false, locked=false, hidden=false, hideInd=false, sel=null, active=0;
 const uid=()=>Math.random().toString(36).slice(2,9);
 for(const k in drawings)drawings[k]=drawings[k].map(s=>s.pts?s:{id:uid(),type:{h:'hline',t:'trend',f:'fib'}[s.type],pts:s.b?[s.a,s.b]:[s.a],color:{h:'#ffd54f',t:'#4fc3f7',f:'#90a4ae'}[s.type],width:1.5,text:''});
 const DARK={bg:'#0e1116',grid:'#1b202a',txt:'#9598a1',up:'#26a69a',dn:'#ef5350'},LIGHT={bg:'#ffffff',grid:'#eef0f3',txt:'#333333',up:'#089981',dn:'#f23645'};
@@ -497,14 +497,15 @@ class Pane{
   return this.subs[k]={el,chart,series};
  }
  render(){
+  const I=hideInd?{}:ind;
   const d=this.view(),close=d.map(x=>x.close);
   this.candle.setData(d);
-  this.vol.setData(ind.vol?d.map(x=>({time:x.time,value:x.vol,color:(x.close>=x.open?cfg.up:cfg.dn)+'66'})):[]);
-  for(const k in MA)this.ma[k].setData(ind[k]?sma(d,MA[k][0]):[]);
-  this.ema.forEach((s,i)=>s.setData(ind.ema?al(d,ema(close,cfg['e'+(i+1)])):[]));
-  const b=ind.bb?boll(d,cfg.bn,cfg.bk):[[],[],[]];this.bb.forEach((s,i)=>s.setData(b[i]));
+  this.vol.setData(I.vol?d.map(x=>({time:x.time,value:x.vol,color:(x.close>=x.open?cfg.up:cfg.dn)+'66'})):[]);
+  for(const k in MA)this.ma[k].setData(I[k]?sma(d,MA[k][0]):[]);
+  this.ema.forEach((s,i)=>s.setData(I.ema?al(d,ema(close,cfg['e'+(i+1)])):[]));
+  const b=I.bb?boll(d,cfg.bn,cfg.bk):[[],[],[]];this.bb.forEach((s,i)=>s.setData(b[i]));
   for(const k of['rsi','macd']){
-   if(!ind[k]){this.dropSub(k);continue}
+   if(!I[k]){this.dropSub(k);continue}
    const s=this.subs[k]||this.makeSub(k);
    if(k==='rsi')s.series[0].setData(al(d,rsi(d,cfg.rn)));
    else{const f=ema(close,cfg.mf),sl=ema(close,cfg.ms),m=f.map((v,i)=>v==null||sl[i]==null?null:v-sl[i]),sg=ema(m,cfg.mg),h=m.map((v,i)=>v==null||sg[i]==null?null:v-sg[i]);
@@ -517,13 +518,14 @@ class Pane{
   this.info();
  }
  info(){
+  const I=hideInd?{}:ind;
   if(this.msg){this.legend.textContent=this.msg;return}
   const d=this.view();if(!d.length)return;
   let i=this.hover?d.findIndex(x=>x.time===this.hover):-1;if(i<0)i=d.length-1;
   const x=d[i],f=v=>v.toFixed(this.prec??2),chg=(x.close/x.open-1)*100,s=d.slice(0,i+1);
   let h=`${this.sym.replace(/[<>&]/g,'')}　開${f(x.open)} 高${f(x.high)} 低${f(x.low)} 收${f(x.close)} <span style="color:${chg>=0?cfg.up:cfg.dn}">${chg.toFixed(2)}%</span><br>`;
-  for(const k in MA){const n=MA[k][0];if(ind[k]&&s.length>=n)h+=`<span style="color:${MA[k][1]}">MA${n} ${f(sma(s.slice(-n),n)[0].value)}</span>　`}
-  if(ind.bb&&s.length>=cfg.bn){const[m,u,l]=boll(s.slice(-cfg.bn),cfg.bn,cfg.bk);h+=`<br><span style="color:#7986cb">BB 上${f(u[0].value)} 中${f(m[0].value)} 下${f(l[0].value)}</span>`}
+  for(const k in MA){const n=MA[k][0];if(I[k]&&s.length>=n)h+=`<span style="color:${MA[k][1]}">MA${n} ${f(sma(s.slice(-n),n)[0].value)}</span>　`}
+  if(I.bb&&s.length>=cfg.bn){const[m,u,l]=boll(s.slice(-cfg.bn),cfg.bn,cfg.bk);h+=`<br><span style="color:#7986cb">BB 上${f(u[0].value)} 中${f(m[0].value)} 下${f(l[0].value)}</span>`}
   this.legend.innerHTML=h;
  }
  // 回放
@@ -786,9 +788,9 @@ function place(x,y){const bar=$('#fav');x=Math.max(0,Math.min(innerWidth-bar.off
  toggle('magnet','磁鐵（吸附開高低收）','<path d="M5 4v8a7 7 0 0014 0V4h-4v8a3 3 0 01-6 0V4z"/>',b=>{b.classList.toggle('on',magnet=!magnet);store.set('magnet',magnet)});
  magnet=!!store.get('magnet',false);$('[data-act=magnet]').classList.toggle('on',magnet);
  toggle('lock','鎖定全部畫線','<rect x="5" y="11" width="14" height="9"/><path d="M8 11V7a4 4 0 018 0v4"/>',b=>b.classList.toggle('on',locked=!locked));
- toggle('hide','隱藏全部畫線','<path d="M2 12s4-6 10-6 10 6 10 6-4 6-10 6-10-6-10-6z"/><circle cx="12" cy="12" r="2.5"/>',b=>{b.classList.toggle('on',hidden=!hidden);select(null)});
+ toggle('hide','顯示／隱藏（繪圖、指標）','<path d="M2 12s4-6 10-6 10 6 10 6-4 6-10 6-10-6-10-6z"/><circle cx="12" cy="12" r="2.5"/>',b=>eyeMenu(b));
  toggle('undo','復原 (Ctrl+Z)','<path d="M9 5L4 10l5 5M4 10h10a6 6 0 010 10h-3"/>',undo);
- toggle('clear','清除本商品全部畫線','<path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14"/>',()=>{const s=panes[active].sym;if(confirm(`清除 ${s} 的所有畫線？`)){snapshot(s);delete drawings[s];save();select(null)}});
+ toggle('clear','移除（繪圖、指標）','<path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14"/>',b=>trashMenu(b));
 }
 addEventListener('pointerdown',e=>{if(!e.target.closest('.menu,#tools'))closeMenus()},true);
 addEventListener('resize',()=>{closeMenus();favBar()});
@@ -804,9 +806,33 @@ addEventListener('keydown',e=>{
  if(mod&&k==='c'&&sel)clip=copyOf(sel.s);
  if(mod&&k==='v'&&clip)paste(p,clip);
 });
+const IND_NAMES={m1:'MA①',m7:'MA②',m21:'MA③',m60:'MA④',m200:'MA⑤',ema:'EMA',bb:'布林',vol:'成交量',rsi:'RSI',macd:'MACD'};
+const indName=k=>MA[k]?'MA'+MA[k][0]:IND_NAMES[k];
+const activeInd=()=>[...$$('[data-ind]').map(b=>b.dataset.ind).filter(k=>ind[k]).map(k=>({name:indName(k),off:()=>ind[k]=0})),...Object.keys(onchart).map(n=>({name:n,off:()=>delete onchart[n]}))];
+function syncView(){
+ store.set('ind',ind);saveScripts();$$('[data-ind]').forEach(b=>b.classList.toggle('on',!!ind[b.dataset.ind]));chips();
+ $('[data-act=hide]').classList.toggle('on',hidden||hideInd);panes.forEach(p=>p.render());
+}
+function setHidden(draw,inds){hidden=draw;hideInd=inds;select(null);setTool('');syncView()}
+const under=b=>{const r=b.getBoundingClientRect();return[r.right+4,r.top]};
+function eyeMenu(b){
+ const sym=panes[active].sym,one=(drawings[sym]||[]).filter(s=>s.hide).length;
+ showMenu([[hidden?'顯示繪圖':'隱藏繪圖',()=>setHidden(!hidden,hideInd),hidden?'已隱藏':''],[hideInd?'顯示指標':'隱藏指標',()=>setHidden(hidden,!hideInd),hideInd?'已隱藏':''],null,
+  ['全部隱藏',()=>setHidden(true,true)],['全部顯示',()=>setHidden(false,false)],null,
+  [`恢復個別隱藏的繪圖（${one}）`,one&&(()=>{snapshot(sym);drawings[sym].forEach(s=>delete s.hide);save()})]],...under(b));
+}
+function trashMenu(b){
+ const sym=panes[active].sym,n=(drawings[sym]||[]).length,list=activeInd();
+ const delDraw=()=>{snapshot(sym);delete drawings[sym];save();select(null)},delInd=()=>{activeInd().forEach(x=>x.off());syncView()};
+ showMenu([[`移除繪圖（${sym}：${n}）`,n&&(()=>{if(confirm(`移除 ${sym} 的 ${n} 個繪圖？`))delDraw()})],
+  [`移除指標（${list.length}）`,list.length&&(()=>{if(confirm(`從圖表移除 ${list.length} 個指標？（已儲存的代碼不會刪除）`))delInd()})],
+  ['繪圖和指標全部移除',(n||list.length)&&(()=>{if(confirm('移除本商品繪圖及圖上所有指標？')){if(n)delDraw();delInd()}})],null,
+  ['選擇指標移除',null,'',list.length?list.map(x=>[x.name,()=>{x.off();syncView()}]):[['沒有指標',null]]],
+  ['選擇繪圖移除…',n&&(()=>openTree(panes[active]))]],...under(b));
+}
 function labels(){syncMA();for(const k in MA){const b=$(`[data-ind=${k}]`);b.textContent='MA'+MA[k][0];b.style.borderBottom='2px solid '+MA[k][1]}}
 labels();
-$$('[data-ind]').forEach(b=>{const k=b.dataset.ind;b.classList.toggle('on',!!ind[k]);b.onclick=()=>{ind[k]=ind[k]?0:1;b.classList.toggle('on',!!ind[k]);store.set('ind',ind);panes.forEach(p=>p.render())}});
+$$('[data-ind]').forEach(b=>{const k=b.dataset.ind;b.classList.toggle('on',!!ind[k]);b.onclick=()=>{if(hideInd){hideInd=false;ind[k]=0;$('[data-act=hide]').classList.toggle('on',hidden)}ind[k]=ind[k]?0:1;b.classList.toggle('on',!!ind[k]);store.set('ind',ind);panes.forEach(p=>p.render())}});
 function applyCfg(){store.set('cfg',cfg);labels();$('#gridBtn').classList.toggle('on',cfg.showGrid);panes.forEach(p=>{p.theme();p.render()})}
 function openSettings(){
  const d=$('#dlg'),c=(k,n)=>`<label>${n}<input type="color" name="${k}" value="${cfg[k]}"></label>`,num=(ks,n)=>`<label>${n}<span>${ks.map(k=>`<input type="number" name="${k}" min="${k==='bk'?.1:1}" max="1000" step="${k==='bk'?.1:1}" value="${cfg[k]}">`).join(' ')}</span></label>`;
@@ -841,7 +867,7 @@ function runScripts(pane,d){
  const L=LightweightCharts;
  (pane.sx||[]).forEach(x=>{if(!x.sub)x.series.forEach(s=>pane.chart.removeSeries(s));x.lines.forEach(([s,l])=>s.removePriceLine(l));if(x.sub){x.sub.chart.remove();x.sub.el.remove()}});
  pane.sx=[];const markers=[],errors=[];
- if(d.length)for(const[name,code]of Object.entries(onchart)){
+ if(d.length)for(const[name,code]of Object.entries(hideInd?{}:onchart)){
   try{
    const r=pineRun(compile(code),d,{sym:pane.sym,params:params[name]}),x={series:[],lines:[],sub:null};pane.sx.push(x);
    let chart=pane.chart;
@@ -899,7 +925,7 @@ function initEditor(){
  const keep=()=>store.set('draft',{name:name.value,code:code.value});name.oninput=code.oninput=keep;
  const title=()=>name.value.trim()||'未命名腳本';
  $('#edBtn').onclick=()=>$('#ed').classList.toggle('show');$('#edClose').onclick=()=>$('#ed').classList.remove('show');
- $('#edAdd').onclick=()=>{try{pineRun(compile(code.value),panes[0].view().slice(-300),{sym:panes[0].sym})}catch(e){msg.textContent=e.message;return}onchart[title()]=code.value;saveScripts();chips();msg.textContent='';rerender();if(!msg.textContent)msg.textContent='已新增到圖表'};
+ $('#edAdd').onclick=()=>{try{pineRun(compile(code.value),panes[0].view().slice(-300),{sym:panes[0].sym})}catch(e){msg.textContent=e.message;return}onchart[title()]=code.value;hideInd=false;$('[data-act=hide]').classList.toggle('on',hidden);saveScripts();chips();msg.textContent='';rerender();if(!msg.textContent)msg.textContent='已新增到圖表'};
  $('#edSave').onclick=()=>{scripts[title()]=code.value;if(title() in onchart){onchart[title()]=code.value;rerender()}saveScripts();edList(title());msg.textContent='已儲存：'+title()};
  $('#edNew').onclick=()=>{name.value='未命名腳本';code.value='//@version=6\nindicator("我的腳本")\nplot(close)';edList();keep()};
  $('#edDel').onclick=()=>{const n=$('#edSel').value;if(n&&confirm(`刪除腳本「${n}」？`)){delete scripts[n];saveScripts();edList()}};
