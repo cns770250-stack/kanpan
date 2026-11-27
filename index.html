@@ -282,7 +282,7 @@ function pineCompile(code){
  code.replace(/\r|\uFEFF/g,'').split('\n').forEach((raw,n)=>{
   const toks=[],re=/\s*(?:(\/\/.*)|("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')|(#[0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?)|(\d+\.?\d*(?:e-?\d+)?|\.\d+)|([A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*)|(:=|\+=|-=|\*=|\/=|==|!=|<=|>=|=>|[-+*\/%<>=?:,()\[\]])|(\S))/y;
   let m;while((m=re.exec(raw))){if(m[1])break;if(m[7])throw Error(`第 ${n+1} 行：無法辨識的字元 ${m[7]}`);
-   if(m[2])toks.push({k:'str',v:m[2].slice(1,-1)});else if(m[3])toks.push({k:'str',v:m[3]});else if(m[4])toks.push({k:'num',v:+m[4]});else if(m[5])toks.push({k:'id',v:m[5]});else toks.push({k:'op',v:m[6]})}
+   if(m[2])toks.push({k:'str',v:m[2].slice(1,-1)});else if(m[3])toks.push({k:'str',v:m[3]});else if(m[4])toks.push({k:'num',v:+m[4],f:m[4].includes('.')});else if(m[5])toks.push({k:'id',v:m[5]});else toks.push({k:'op',v:m[6]})}
   if(!toks.length)return;
   const indent=raw.match(/^[ \t]*/)[0].replace(/\t/g,'    ').length;
   if(buf)buf.toks.push(...toks);else buf={indent,toks,no:n+1};
@@ -295,21 +295,29 @@ function pineCompile(code){
  const parseBlock=indent=>{const out=[];while(li<lines.length&&lines[li].indent>=indent){const L=lines[li];if(L.indent>indent)throw Error(`第 ${L.no} 行：縮排不正確`);out.push(parseStmt())}return out};
  const body=ind=>{if(li>=lines.length||lines[li].indent<=ind)throw Error(`第 ${lines[li-1].no} 行：if 底下缺少縮排內容`);return parseBlock(lines[li].indent)};
  function parseStmt(){
-  const L=lines[li++],t=L.toks;let p=0;
+  const L=lines[li++];let t=L.toks,p=0;
   const err=m=>{throw Error(`第 ${L.no} 行：${m}`)},peek=()=>t[p],is=v=>t[p]&&t[p].k!=='str'&&t[p].v===v,eat=v=>{if(!is(v))err(`缺少 ${v}`);p++};
   const bin=(next,ops)=>()=>{let a=next();while(t[p]&&t[p].k!=='str'&&ops.includes(t[p].v)){const op=t[p++].v;a={o:'bin',op,a,b:next(),no:L.no}}return a};
   const primary=()=>{const x=t[p++];if(!x)err('語法不完整');
-   if(x.k==='num'||x.k==='str')return{o:'lit',v:x.v};
+   if(x.k==='num'||x.k==='str')return{o:'lit',v:x.v,f:x.f};
    if(x.v==='('){const e=expr();eat(')');return e}
    if(x.v==='['){const items=[];do{items.push(expr())}while(is(',')&&++p);eat(']');return{o:'tuple',items}}
-   if(x.k==='id'){if(['for','while','switch','import','method','type'].includes(x.v))err(`不支援 ${x.v}`);return{o:'id',name:x.v,no:L.no}}
+   if(x.k==='id'){if(['for','while','import','method','type'].includes(x.v))err(`不支援 ${x.v}`);return{o:'id',name:x.v,no:L.no}}
    err(`不能使用 ${x.v}`)};
   const post=()=>{let a=primary();for(;;){
     if(is('(')&&a.o==='id'){p++;const args=[],named={};while(!is(')')){if(t[p]?.k==='id'&&t[p+1]?.v==='='&&t[p+1].k==='op'){const k=t[p].v;p+=2;named[k]=expr()}else args.push(expr());if(!is(')'))eat(',')}p++;a={o:'call',name:a.name,args,named,no:L.no}}
     else if(is('[')){p++;const n=expr();eat(']');a={o:'hist',a,n}}else return a}};
   const unary=()=>{if(is('-')){p++;return{o:'neg',a:unary()}}if(is('not')){p++;return{o:'not',a:unary()}}if(is('+'))p++;return post()};
   const mul=bin(unary,['*','/','%']),addx=bin(mul,['+','-']),rel=bin(addx,['<','>','<=','>=']),eq=bin(rel,['==','!=']),and=bin(eq,['and']),or=bin(and,['or']);
-  function expr(){const c=or();if(!is('?'))return c;p++;const a=expr();eat(':');return{o:'tern',c,a,b:expr()}}
+  function expr(){if(is('switch')){p++;const subj=p<t.length?expr():null,cases=[];
+    if(p<t.length||li>=lines.length||lines[li].indent<=L.indent)err('switch 寫法不支援');
+    const ind=lines[li].indent;
+    while(li<lines.length&&lines[li].indent===ind){const C=lines[li++],a=C.toks.findIndex(x=>x.k==='op'&&x.v==='=>');
+     if(a<0||a===C.toks.length-1)throw Error(`第 ${C.no} 行：switch 每個分支要寫成「條件 => 值」單行`);
+     const sub=toks=>{const save=[t,p];t=toks;p=0;const e=expr();if(p<t.length)err('switch 分支語法不支援');[t,p]=save;return e};
+     cases.push({m:a?sub(C.toks.slice(0,a)):null,e:sub(C.toks.slice(a+1))})}
+    return{o:'switch',subj,cases,no:L.no}}
+   const c=or();if(!is('?'))return c;p++;const a=expr();eat(':');return{o:'tern',c,a,b:expr()}}
   const end=s=>{if(p<t.length)err(`多出的內容 ${t[p].v}`);return s};
   if(is('if')){p++;const node={o:'if',c:expr(),no:L.no};end();node.a=body(L.indent);
    if(lines[li]&&lines[li].indent===L.indent&&lines[li].toks[0].v==='else'){const E=lines[li];if(E.toks[1]?.v==='if'){E.toks=E.toks.slice(1);node.b=[parseStmt()]}else{li++;node.b=body(L.indent)}}return node}
@@ -352,7 +360,7 @@ function pineExpand(ast){
 }
 const PCOL={aqua:'#00bcd4',black:'#363a45',blue:'#2962ff',fuchsia:'#e040fb',gray:'#787b86',green:'#4caf50',lime:'#00e676',maroon:'#880e4f',navy:'#311b92',olive:'#808000',orange:'#ff9800',purple:'#9c27b0',red:'#f23645',silver:'#b2b5be',teal:'#089981',white:'#ffffff',yellow:'#fdd835'};
 function pineRun(ast,data,info){
- const N=data.length,vars=new Map(),mem=new Map(),out={title:'指標',overlay:false,inputs:new Map(),styles:new Map(),plots:new Map(),hlines:new Map(),shapes:[],warn:new Set()};let i=0;
+ const N=data.length,vars=new Map(),mem=new Map(),out={title:'指標',overlay:false,inputs:new Map(),styles:new Map(),plots:new Map(),hlines:new Map(),shapes:[],fills:new Map(),warn:new Set()};let i=0;
  const na=v=>typeof v==='number'?Number.isNaN(v):v==null;
  const bi={open:j=>data[j].open,high:j=>data[j].high,low:j=>data[j].low,close:j=>data[j].close,volume:j=>data[j].vol,
   hl2:j=>(data[j].high+data[j].low)/2,hlc3:j=>(data[j].high+data[j].low+data[j].close)/3,ohlc4:j=>(data[j].open+data[j].high+data[j].low+data[j].close)/4,
@@ -376,11 +384,13 @@ function pineRun(ast,data,info){
   case'tern':{const c=truth(ev(n.c)),a=ev(n.a),b=ev(n.b);return c?a:b}
   case'bin':{const a=ev(n.a),b=ev(n.b);switch(n.op){case'+':return a+b;case'-':return a-b;case'*':return a*b;case'/':return b===0?NaN:a/b;case'%':return a%b;case'<':return a<b;case'>':return a>b;case'<=':return a<=b;case'>=':return a>=b;case'==':return a===b;case'!=':return !na(a)&&!na(b)&&a!==b;case'and':return truth(a)&&truth(b);case'or':return truth(a)||truth(b)}}
   case'tuple':return n.items.map(ev);
+  case'switch':{const v=n.subj&&ev(n.subj);for(const c of n.cases)if(!c.m||(n.subj?ev(c.m)===v:truth(ev(c.m))))return ev(c.e);return NaN}
   case'ucall':run(n.pre);run(n.body);return ev(n.ret);
   case'call':return call(n);
   }
  }
  const truth=v=>!na(v)&&!!v;
+ const alpha=(c,t)=>typeof c==='string'&&c[0]==='#'?c.slice(0,7)+Math.round((100-Math.max(0,Math.min(100,t)))*2.55).toString(16).padStart(2,'0'):c;
  function call(n){
   let f=n.name;if(f==='study')f='indicator';else if(/^(sma|ema|rma|wma|rsi|atr|stdev|highest|lowest|change|crossover|crossunder|cross|pivothigh|pivotlow|macd)$/.test(f))f='ta.'+f;else if(/^(abs|max|min)$/.test(f))f='math.'+f;
   const arg=(k,name,def)=>n.named[name]?ev(n.named[name]):n.args[k]?ev(n.args[k]):def;
@@ -390,18 +400,20 @@ function pineRun(ast,data,info){
    if(!st.key){const title=String(arg(1,'title',`參數（第 ${n.no} 行）`)),group=n.named.group?ev(n.named.group)+'｜':'';let k=group+title;for(let c=2;out.inputs.has(k);c++)k=`${group}${title} (${c})`;st.key=k}
    const key=st.key;
    const isSrc=f==='input.source'||(f==='input'&&dn.o==='id'&&['open','high','low','close','hl2','hlc3','ohlc4'].includes(dn.name));
-   const type=isSrc?'source':f==='input'?(typeof def==='boolean'?'bool':typeof def==='number'?(Number.isInteger(def)?'int':'float'):/^#/.test(def)?'color':'string'):f.slice(6);
-   if(!out.inputs.has(key)){const meta={type,def:isSrc?dn.name:def};if(n.named.options)meta.options=ev(n.named.options);if(type==='int'||type==='float'){meta.min=n.named.minval?ev(n.named.minval):n.args[2]?ev(n.args[2]):undefined;meta.max=n.named.maxval?ev(n.named.maxval):n.args[3]?ev(n.args[3]):undefined}out.inputs.set(key,meta)}
+   const type=isSrc?'source':f==='input'?(typeof def==='boolean'?'bool':typeof def==='number'?(Number.isInteger(def)&&!dn.f?'int':'float'):/^#/.test(def)?'color':'string'):f.slice(6);
+   if(!out.inputs.has(key)){const meta={type,def:isSrc?dn.name:def};if(n.named.options)meta.options=ev(n.named.options);else if(f==='input.string'&&n.args[2]?.o==='tuple')meta.options=ev(n.args[2]);if(type==='int'||type==='float'){meta.min=n.named.minval?ev(n.named.minval):n.args[2]?ev(n.args[2]):undefined;meta.max=n.named.maxval?ev(n.named.maxval):n.args[3]?ev(n.args[3]):undefined}out.inputs.set(key,meta)}
    const v=info.params?.in?.[key];if(v===undefined)return def;
    if(isSrc)return v in bi?bi[v](i):def;
    if(type==='int'||type==='float'){if(typeof v!=='number'||!isFinite(v))return def;const m=out.inputs.get(key);return Math.min(m.max??Infinity,Math.max(m.min??-Infinity,type==='int'?Math.round(v):v))}
    return typeof v===typeof def?v:def}
-  if(f==='plot'){let p=out.plots.get(n);const v=arg(0,'series'),color=arg(2,'color','#2962ff');
-   if(!p){const title=String(arg(1,'title',`線 ${out.plots.size+1}`)),width=arg(3,'linewidth',1),o=info.params?.st?.[title]||{};out.plots.set(n,p={title,width:o.width??width,style:String(arg(4,'style','')),hidden:!!o.hidden,over:o.color,data:[]});out.styles.set(title,{color:o.color??String(color).slice(0,7),width:p.width,hidden:p.hidden})}p.data[i]={v,color:p.over??color};return}
-  if(f==='hline'){const price=arg(0,'price');out.hlines.set(n,{price,color:arg(2,'color','#787b86'),title:String(arg(1,'title',''))});return}
+  if(f==='plot'){let p=out.plots.get(n);const v=arg(0,'series');let color=arg(2,'color','#2962ff');if(n.named.transp)color=alpha(color,ev(n.named.transp));
+   if(!p){const title=String(arg(1,'title',`線 ${out.plots.size+1}`)),width=arg(3,'linewidth',1),o=info.params?.st?.[title]||{};out.plots.set(n,p={title,width:o.width??width,style:String(arg(4,'style','')),hidden:!!o.hidden||(!!n.named.transp&&ev(n.named.transp)>=100&&o.hidden===undefined),off:o.hidden,over:o.color,data:[]});out.styles.set(title,{color:o.color??String(color).slice(0,7),width:p.width,hidden:p.hidden})}p.data[i]={v,color:p.over??color};return p}
+  if(f==='hline'){const price=arg(0,'price');const h={price,color:arg(2,'color','#787b86'),title:String(arg(1,'title',''))};out.hlines.set(n,h);return h}
   if(f==='plotshape'||f==='plotchar'){const v=arg(0,'series');if(truth(v)){const loc=String(n.named.location?ev(n.named.location):f==='plotshape'&&n.args[3]?ev(n.args[3]):'location.abovebar'),st=String(f==='plotshape'?arg(2,'style',''):'');
      out.shapes.push({i,below:loc.includes('below')||/up/.test(st),shape:/up/.test(st)?'arrowUp':/down/.test(st)?'arrowDown':/square|diamond/.test(st)?'square':'circle',color:arg(4,'color','#2962ff'),text:String(n.named.text?ev(n.named.text):f==='plotchar'?arg(2,'char',''):'')})}return}
-  if(/^(alert|alertcondition|fill|barcolor|bgcolor|plotcandle|plotbar|plotarrow)$/.test(f)){out.warn.add(f);return}
+  if(/^(alert|alertcondition|barcolor|bgcolor|plotcandle|plotbar|plotarrow)$/.test(f)){out.warn.add(f);return}
+  if(f==='fill'){const a=ev(n.args[0]),b=ev(n.args[1]);let c=arg(2,'color',PCOL.blue);if(n.named.transp)c=alpha(c,ev(n.named.transp));else if(typeof c==='string'&&c.length===7)c=alpha(c,90);
+   let q=out.fills.get(n);if(!q){const title=String(n.named.title?ev(n.named.title):`填色 ${out.fills.size+1}`);out.fills.set(n,q={title,a,b,data:[]})}q.a=a;q.b=b;q.data[i]=c;return}
   if(f==='na')return na(ev(n.args[0]));
   if(f==='nz'){const v=ev(n.args[0]);return na(v)?arg(1,'replacement',0):v}
   if(f==='color.new'){const c=String(ev(n.args[0])).slice(0,7),t=arg(1,'transp',0);return c+Math.round((100-t)*2.55).toString(16).padStart(2,'0')}
@@ -628,6 +640,14 @@ class Pane{
   setTool('');
  }
  finishPath(){const s=this.draft;if(!s||DEFS[s.type].n!==-1)return;s.pts.pop();s.pts=s.pts.filter((q,i,a)=>!i||Math.abs(this.X(q.t)-this.X(a[i-1].t))+Math.abs(this.Y(q.p)-this.Y(a[i-1].p))>3);if(s.pts.length>1)this.finish();else this.draft=null}
+ // Shift：以前一點為基準，鎖定水平／垂直／45°
+ angle(type,prev,m,a){
+  if(!['trend','ray','info','extended','angle','arrow','channel','polyline','path'].includes(type)||!prev)return a;
+  const x=this.X(prev.t),y=this.Y(prev.p);if(x==null||y==null)return a;
+  const k=((Math.round(Math.atan2(m.y-y,m.x-x)/(Math.PI/4))%8)+8)%8;
+  if(k===0||k===4)return{t:a.t,p:prev.p};if(k===2||k===6)return{t:prev.t,p:a.p};
+  const dx=Math.cos(k*Math.PI/4),dy=Math.sin(k*Math.PI/4),len=(m.x-x)*dx+(m.y-y)*dy,q=this.pointAt({x:x+dx*len,y:y+dy*len},false);return q||a;
+ }
  bindPointer(){
   const w=this.wrap,cv=this.cv;
   cv.addEventListener('pointerdown',e=>{
@@ -636,7 +656,7 @@ class Pane{
    const a=this.pointAt(m);if(!a||!tool)return;
    cv.setPointerCapture(e.pointerId);this.down=m;this.measure=null;
    const s=this.draft;
-   if(s){const n=DEFS[s.type].n;s.pts[this.step_]=a;
+   if(s){const n=DEFS[s.type].n;s.pts[this.step_]=e.shiftKey&&(s.type!=='channel'||this.step_===1)?this.angle(s.type,s.pts[this.step_-1],m,a):a;
     if(n===-1){if(e.detail>1||(this.last&&Math.hypot(m.x-this.last.x,m.y-this.last.y)<5)){this.finishPath();return}this.step_++;s.pts.push({...a})}
     else if(++this.step_>=n)this.finish();
     this.last=m;return}
@@ -645,19 +665,26 @@ class Pane{
   });
   cv.addEventListener('pointermove',e=>{
    const m=this.mouse=this.pos(e),s=this.draft;if(!s)return;const a=this.pointAt(m);if(!a)return;
-   if(DEFS[s.type].n===0){if(e.buttons)s.pts.push(a)}else for(let i=this.step_;i<s.pts.length;i++)s.pts[i]={...a};
+   if(DEFS[s.type].n===0){if(e.buttons)s.pts.push(a)}else{const b=e.shiftKey&&(s.type!=='channel'||this.step_===1)?this.angle(s.type,s.pts[this.step_-1],m,a):a;for(let i=this.step_;i<s.pts.length;i++)s.pts[i]={...b}}
   });
   cv.addEventListener('pointerup',e=>{
    const s=this.draft;if(!s)return;const n=DEFS[s.type].n;
    if(n===0){s.pts.length>1?this.finish():this.draft=null;return}
    const m=this.pos(e);
-   if(n>1&&this.step_===1&&Math.hypot(m.x-this.down.x,m.y-this.down.y)>8){s.pts[1]=this.pointAt(m);this.step_=2;if(n===2)this.finish();else for(let i=2;i<n;i++)s.pts[i]={...s.pts[1]}}
+   if(n>1&&this.step_===1&&Math.hypot(m.x-this.down.x,m.y-this.down.y)>8){s.pts[1]=e.shiftKey?this.angle(s.type,s.pts[0],m,this.pointAt(m)):this.pointAt(m);this.step_=2;if(n===2)this.finish();else for(let i=2;i<n;i++)s.pts[i]={...s.pts[1]}}
   });
   w.addEventListener('contextmenu',e=>{e.preventDefault();clearTimeout(this.hold);if(this.draft){DEFS[this.draft.type].n===-1?this.finishPath():setTool('');return}if(tool){setTool('');return}const h=this.hit(this.pos(e));if(h)select(h.s,this);openMenu(e.clientX,e.clientY,this,h?.s,this.pos(e))});
   w.addEventListener('dblclick',e=>{if(tool)return;const h=this.hit(this.pos(e));if(h){select(h.s,this);openProps(this,h.s)}});
   w.addEventListener('pointerdown',e=>{
    if(tool||this.picking||e.button)return;this.measure=null;
    const m=this.pos(e),h=this.hit(m);
+   if(e.shiftKey){const a=this.pointAt(m);if(!a)return;e.preventDefault();e.stopPropagation();select(null);setTool('measure');
+    this.draft=this.make('measure',a);this.step_=1;this.down=this.last=m;this.mouse=m;
+    this.chart.applyOptions({handleScroll:false,handleScale:false});
+    const move=ev=>{const q=this.pointAt(this.pos(ev));if(q&&this.draft?.type==='measure')this.draft.pts[1]=q};
+    const up=ev=>{removeEventListener('pointermove',move);removeEventListener('pointerup',up);removeEventListener('pointercancel',up);this.chart.applyOptions({handleScroll:true,handleScale:true});
+     const q=this.pos(ev);if(this.draft?.type==='measure'&&Math.hypot(q.x-m.x,q.y-m.y)>8){this.draft.pts[1]=this.pointAt(q);this.finish()}};
+    addEventListener('pointermove',move);addEventListener('pointerup',up);addEventListener('pointercancel',up);return}
    if(e.pointerType==='touch'){clearTimeout(this.hold);const x=e.clientX,y=e.clientY;this.hold=setTimeout(()=>openMenu(x,y,this,h?.s,m),600);const stop=ev=>{if(ev.type==='pointermove'&&Math.hypot(ev.clientX-x,ev.clientY-y)<8)return;clearTimeout(this.hold);['pointermove','pointerup','pointercancel'].forEach(t=>removeEventListener(t,stop))};['pointermove','pointerup','pointercancel'].forEach(t=>addEventListener(t,stop))}
    if(!h){if(sel?.pane===this)select(null);return}
    let s=h.s,handle=h.handle;select(s,this);if(locked||s.lock)return;
@@ -667,7 +694,7 @@ class Pane{
     const n=this.pos(ev),a=this.pointAt(n,handle!=null&&magnet);if(!a)return;
     if(!moved){if(Math.hypot(n.x-m.x,n.y-m.y)<3)return;moved=true;snapshot(this.sym);if(clone){s={...JSON.parse(JSON.stringify(s)),id:uid()};this.list().push(s);handle=null;select(s,this)}}
     if(handle!=null){
-     if(s.type==='long'||s.type==='short'){if(handle){s.pts[handle].p=a.p;s.pts[1].t=s.pts[2].t=a.t}else s.pts[0]=a}else s.pts[handle]=a;
+     if(s.type==='long'||s.type==='short'){if(handle){s.pts[handle].p=a.p;s.pts[1].t=s.pts[2].t=a.t}else s.pts[0]=a}else s.pts[handle]=ev.shiftKey&&s.pts.length>1&&(s.type!=='channel'||handle<2)?this.angle(s.type,s.pts[handle?handle-1:1],n,a):a;
     }else{const ts=this.chart.timeScale(),dl=ts.coordinateToLogical(n.x)-ts.coordinateToLogical(m.x),dp=a.p-from.p;s.pts=orig.map(q=>({t:this.toTime(this.toLogical(q.t)+dl),p:q.p+dp}))}
    };
    const up=()=>{removeEventListener('pointermove',move);removeEventListener('pointerup',up);removeEventListener('pointercancel',up);this.chart.applyOptions({handleScroll:true,handleScale:true});if(moved){save();select(s,this)}};
@@ -748,7 +775,7 @@ function openMenu(x,y,pane,s,at){
  showMenu([
   ...(s.type==='fib'||s.type==='fibext'?[[s.trend===false?'顯示趨勢線':'隱藏趨勢線',()=>change(()=>s.trend=s.trend===false)],[s.fill===false?'顯示背景':'關閉背景',()=>change(()=>s.fill=s.fill===false)],null]:[]),
   [s.alert?'取消快訊':'新增快訊',canAlert(s)&&(()=>change(()=>s.alert=!s.alert)),'Alt+A'],null,
-  ['範本',null,'',[['存為此工具預設',()=>{const{color,width,dash,alpha,size,levels,extL,extR,reverse,showV,showP,labelRight,fill,trend,bins,risk}=s;templates[s.type]=JSON.parse(JSON.stringify({color,width,dash,alpha,size,levels,extL,extR,reverse,showV,showP,labelRight,fill,trend,bins,risk}));store.set('tpl',templates)}],['清除此工具預設',()=>{delete templates[s.type];store.set('tpl',templates)}]]],
+  ['範本',null,'',[['存為此工具預設',()=>{const{color,width,dash,alpha,size,levels,extL,extR,reverse,showV,showP,labelRight,fill,trend,bins,risk}=s;templates[s.type]=JSON.parse(JSON.stringify({color,width,dash,alpha,size,levels,extL,extR,reverse,showV,showP,labelRight,fill,trend,bins,risk}));store.set('tpl',templates)}],['清除此工具預設',()=>{delete templates[s.type];store.set('tpl',templates)}],...(s.levels?[null,...setsOf(s.type).map(n=>['套用：'+n,()=>change(()=>loadFibSet(s,n))]),['另存新範本…',()=>{const n=prompt('範本名稱');if(n)saveFibSet(s,n)}]]:[])]],
   ['視覺順序',null,'',[['移到最上層',()=>move(()=>l.length)],['移到最下層',()=>move(()=>0)],['上移一層',()=>move(i=>i+1)],['下移一層',()=>move(i=>i-1)]]],
   ['時間週期的可見性',null,'',[['所有週期顯示',()=>change(()=>delete s.tfs)],[`只在 ${pane.tf.replace('utc','')} 顯示`,()=>change(()=>s.tfs=[pane.tf])],['自訂…',()=>openProps(pane,s)]]],
   ['物件樹',()=>openTree(pane)],null,
@@ -756,6 +783,16 @@ function openMenu(x,y,pane,s,at){
   [s.lock?'解除鎖定':'鎖定',()=>{change(()=>s.lock=!s.lock);select(s,pane)}],['隱藏',()=>{change(()=>s.hide=true);select(null)}],['移除',!s.lock&&(()=>{select(s,pane);removeSel()}),'Del'],null,
   ['設定…',()=>openProps(pane,s)]],x,y);
 }
+let fibsets=store.get('fibsets',{});
+const FIBKEYS=['color','width','dash','alpha','size','levels','extL','extR','reverse','showV','showP','labelRight','fill','trend'];
+const setsOf=t=>Object.keys(fibsets[t]||{});
+const saveSets=()=>store.set('fibsets',fibsets);
+function saveFibSet(s,name){
+ const n=name.trim();if(!n||n==='__proto__')return false;
+ if(setsOf(s.type).includes(n)&&!confirm(`覆蓋「${n}」？`))return false;
+ (fibsets[s.type]??={})[n]=JSON.parse(JSON.stringify(Object.fromEntries(FIBKEYS.map(k=>[k,s[k]]))));saveSets();return true;
+}
+function loadFibSet(s,n){const p=fibsets[s.type]?.[n];if(!p)return;for(const k of FIBKEYS){if(p[k]===undefined)delete s[k];else s[k]=JSON.parse(JSON.stringify(p[k]))}}
 function openTree(pane){
  const d=$('#dlg');d.oncancel=null;d.textContent='';const sym=pane.sym,l=drawings[sym]||[];
  d.append(el('h4',{textContent:sym+' 物件樹'}));
@@ -765,8 +802,8 @@ function openTree(pane){
  d.append(el('button',{textContent:'關閉',onclick:()=>d.close()}));if(!d.open)d.showModal();
 }
 // 單一畫線設定視窗（即時預覽，可取消）
-function openProps(pane,s){
- const d=$('#dlg');if(d.open)d.close();d.textContent='';const before=JSON.stringify(s),all=JSON.stringify(drawings[pane.sym]||[]);
+function openProps(pane,s,keep){
+ const d=$('#dlg');if(d.open)d.close();d.textContent='';const before=keep?.before??JSON.stringify(s),all=keep?.all??JSON.stringify(drawings[pane.sym]||[]);
  const row=(label,node)=>d.append(el('label',{},el('span',{textContent:label}),node));
  const input=(type,value,on,extra={})=>el('input',{type,value,...extra,oninput:e=>on(e.target.value,e.target)});
  const check=(value,on)=>el('input',{type:'checkbox',checked:value,onchange:e=>on(e.target.checked)});
@@ -789,6 +826,14 @@ function openProps(pane,s){
  }
  if(s.type==='fibchannel')row('向右延伸',check(!!s.extR,v=>s.extR=v));
  if(s.levels){
+  d.append(el('h4',{textContent:'我的範本'}));
+  const again=()=>openProps(pane,s,{before,all});
+  const pick=el('select',{},el('option',{value:'',textContent:setsOf(s.type).length?'— 選擇已存範本 —':'— 還沒有範本 —'}),...setsOf(s.type).map(n=>el('option',{value:n,textContent:n})));
+  pick.onchange=()=>{if(pick.value){loadFibSet(s,pick.value);const v=pick.value;again();$('#dlg select.fibpick').value=v}};pick.className='fibpick';
+  const nm=el('input',{type:'text',placeholder:'新範本名稱',className:'fibname'});
+  d.append(el('div',{},pick,' ',el('button',{textContent:'刪除範本',onclick:()=>{const v=pick.value;if(v&&confirm(`刪除「${v}」？`)){delete fibsets[s.type][v];saveSets();again()}}})),
+   el('div',{},nm,' ',el('button',{textContent:'另存',onclick:()=>{const v=nm.value.trim();if(!v)return nm.focus();if(saveFibSet(s,v)){again();$('#dlg select.fibpick').value=v}}}),' ',
+    el('button',{textContent:'設為預設',title:'之後新畫的都用這組',onclick:e=>{templates[s.type]=JSON.parse(JSON.stringify(Object.fromEntries(FIBKEYS.map(k=>[k,s[k]]))));store.set('tpl',templates);e.target.textContent='已設為預設'}})));
   d.append(el('h4',{textContent:'比例（勾選顯示／數值／顏色）'}));
   const box=el('div',{className:'levels'});d.append(box);
   const draw=()=>{box.textContent='';s.levels.forEach((l,i)=>box.append(el('div',{},check(l.on,v=>l.on=v),num(l.v,v=>l.v=v),input('color',l.c,v=>l.c=v),el('button',{type:'button',textContent:'✕',onclick:()=>{s.levels.splice(i,1);draw()}}))))};draw();
@@ -806,7 +851,7 @@ function openProps(pane,s){
  const ok=()=>{done=true;if(JSON.stringify(s)!==before){history_.push([pane.sym,all]);save()}d.close();select(s,pane)};
  d.oncancel=e=>{e.preventDefault();cancel()};
  d.append(el('div',{className:'foot'},el('button',{textContent:'取消',onclick:cancel}),el('button',{textContent:'確定',className:'on',onclick:ok})));
- d.showModal();d.scrollTop=0;
+ d.showModal();if(!keep)d.scrollTop=0;
 }
 // 左側工具列：分類彈出，★ 加入浮動常用列
 const ico=d=>`<svg viewBox="0 0 24 24">${d}</svg>`;
@@ -911,13 +956,29 @@ const compiled=new Map();
 let params=store.get('params',{});
 const compile=code=>{if(!compiled.has(code))compiled.set(code,pineCompile(code));return compiled.get(code)};
 const safeColor=c=>typeof c==='string'&&/^#[0-9a-f]{6}([0-9a-f]{2})?$/i.test(c)?c:undefined;
+function fillPrimitive(chart,series,d,q){
+ const val=(x,i)=>x?.data?x.data[i]?.v:x?.price;
+ const draw=target=>target.useMediaCoordinateSpace(({context:g})=>{
+  const ts=chart.timeScale(),r=ts.getVisibleLogicalRange();if(!r)return;
+  const from=Math.max(0,Math.floor(r.from)-2),to=Math.min(d.length-1,Math.ceil(r.to)+2);
+  let top=[],bot=[],col=null;
+  const flush=()=>{if(top.length>1&&col){g.beginPath();top.forEach((p,i)=>i?g.lineTo(...p):g.moveTo(...p));for(let i=bot.length-1;i>=0;i--)g.lineTo(...bot[i]);g.closePath();g.fillStyle=col;g.fill()}top=[];bot=[]};
+  for(let i=from;i<=to;i++){const a=val(q.a,i),b=val(q.b,i),x=ts.timeToCoordinate(d[i].time);
+   const ya=Number.isFinite(a)?series.priceToCoordinate(a):null,yb=Number.isFinite(b)?series.priceToCoordinate(b):null;
+   if(x==null||ya==null||yb==null){flush();col=null;continue}
+   const c=safeColor(q.data[i])||null;top.push([x,ya]);bot.push([x,yb]);
+   if(c!==col){if(top.length>1){flush();top=[[x,ya]];bot=[[x,yb]]}col=c}}
+  flush()});
+ const view={zOrder:()=>'bottom',renderer:()=>({draw})};
+ return{paneViews:()=>[view]};
+}
 function runScripts(pane,d){
  const L=LightweightCharts;
- (pane.sx||[]).forEach(x=>{if(!x.sub)x.series.forEach(s=>pane.chart.removeSeries(s));x.lines.forEach(([s,l])=>s.removePriceLine(l));if(x.sub){x.sub.chart.remove();x.sub.el.remove()}});
+ (pane.sx||[]).forEach(x=>{if(!x.sub)x.series.forEach(s=>pane.chart.removeSeries(s));x.lines.forEach(([s,l])=>s.removePriceLine(l));(x.prims||[]).forEach(([s,q])=>s.detachPrimitive(q));if(x.sub){x.sub.chart.remove();x.sub.el.remove()}});
  pane.sx=[];const markers=[],errors=[];
  if(d.length)for(const[name,code]of Object.entries(hideInd?{}:onchart)){
   try{
-   const r=pineRun(compile(code),d,{sym:pane.sym,params:params[name]}),x={series:[],lines:[],sub:null};pane.sx.push(x);
+   const r=pineRun(compile(code),d,{sym:pane.sym,params:params[name]}),x={series:[],lines:[],prims:[],sub:null};pane.sx.push(x);
    let chart=pane.chart;
    if(!r.overlay){const el=document.createElement('div');el.className='sub';el.innerHTML='<div></div><span></span>';el.querySelector('span').textContent=r.title;pane.el.querySelector('.subs').append(el);
     chart=L.createChart(el.firstChild,{autoSize:true,layout:{background:{color:cfg.bg},textColor:cfg.txt},grid:{vertLines:{color:cfg.grid,visible:cfg.showGrid},horzLines:{color:cfg.grid,visible:cfg.showGrid}},timeScale:{visible:false,rightOffset:8},rightPriceScale:{minimumWidth:80},handleScroll:false,handleScale:false});x.sub={chart,el}}
@@ -928,6 +989,7 @@ function runScripts(pane,d){
     s.setData(d.map((b,i)=>{const q=p.data[i];return q&&typeof q.v==='number'&&isFinite(q.v)?{time:b.time,value:q.v,color:safeColor(q.color)||'#00000000'}:{time:b.time}}));x.series.push(s);first??=s}
    if(!r.overlay&&!first){first=chart.addLineSeries(o);first.setData(d.map(b=>({time:b.time})));x.series.push(first)}
    const target=r.overlay?pane.candle:first;
+   if(target)for(const q of r.fills.values()){if(params[name]?.st?.[q.title]?.hidden)continue;const pr=fillPrimitive(chart,target,d,q);target.attachPrimitive(pr);x.prims.push([target,pr])}
    for(const h of r.hlines.values())if(isFinite(h.price))x.lines.push([target,target.createPriceLine({price:h.price,color:safeColor(h.color)||'#787b86',lineWidth:1,lineStyle:2,title:h.title})]);
    markers.push(...r.shapes.map(m=>({time:d[m.i].time,position:m.below?'belowBar':'aboveBar',shape:m.shape,color:safeColor(m.color)||'#2962ff',text:m.text})));
    if(x.sub){const range=pane.chart.timeScale().getVisibleLogicalRange();if(range)chart.timeScale().setVisibleLogicalRange(range)}
@@ -1000,8 +1062,8 @@ function openLayouts(){
  for(const n in layouts)d.append(el('label',{},el('span',{textContent:n}),el('span',{},el('button',{textContent:'套用',onclick:()=>{applyLayout(layouts[n]);d.close()}}),el('button',{textContent:'覆蓋',onclick:()=>{if(confirm(`用目前版面覆蓋「${n}」？`))put(n)}}),el('button',{textContent:'刪除',onclick:()=>{if(confirm(`刪除「${n}」？`)){delete layouts[n];store.set('layouts',layouts);openLayouts()}}}))));
  const file=el('input',{type:'file',accept:'.json',hidden:true,onchange:async e=>{try{const j=JSON.parse(await e.target.files[0].text());if(j.app!=='kb')throw 0;
    if(!confirm('匯入會合併模板與腳本，並覆蓋相同商品的畫線，繼續？'))return;
-   Object.assign(layouts,j.layouts);Object.assign(indtpl,j.indtpl);saveIT();Object.assign(scripts,j.scripts);Object.assign(params,j.params);for(const k in j.drawings)drawings[k]=j.drawings[k].filter(s=>DEFS[s.type]);store.set('layouts',layouts);saveScripts();save();edList();select(null);openLayouts()}catch{alert('不是有效的看盤台備份檔')}}});
- d.append(el('h4',{textContent:'備份（換電腦或清除瀏覽器資料前請匯出）'}),el('div',{},el('button',{textContent:'匯出備份檔',onclick:()=>{const a=el('a',{href:URL.createObjectURL(new Blob([JSON.stringify({app:'kb',indtpl,layouts,scripts,drawings,params},null,1)],{type:'application/json'})),download:'看盤台備份.json'});a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}}),' ',el('button',{textContent:'匯入備份檔',onclick:()=>file.click()}),file),
+   Object.assign(layouts,j.layouts);Object.assign(indtpl,j.indtpl);saveIT();for(const k in j.fibsets)fibsets[k]={...fibsets[k],...j.fibsets[k]};saveSets();Object.assign(scripts,j.scripts);Object.assign(params,j.params);for(const k in j.drawings)drawings[k]=j.drawings[k].filter(s=>DEFS[s.type]);store.set('layouts',layouts);saveScripts();save();edList();select(null);openLayouts()}catch{alert('不是有效的看盤台備份檔')}}});
+ d.append(el('h4',{textContent:'備份（換電腦或清除瀏覽器資料前請匯出）'}),el('div',{},el('button',{textContent:'匯出備份檔',onclick:()=>{const a=el('a',{href:URL.createObjectURL(new Blob([JSON.stringify({app:'kb',fibsets,indtpl,layouts,scripts,drawings,params},null,1)],{type:'application/json'})),download:'看盤台備份.json'});a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}}),' ',el('button',{textContent:'匯入備份檔',onclick:()=>file.click()}),file),
   el('div',{className:'foot'},el('button',{textContent:'關閉',onclick:()=>d.close()})));
  if(!d.open)d.showModal();
 }
