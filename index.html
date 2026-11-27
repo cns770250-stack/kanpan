@@ -59,15 +59,22 @@ dialog label input[type=number]{width:100px}.levels input[type=number]{width:92p
 #edMsg{padding:4px 12px;color:#ffb74d;font-size:12px;min-height:22px;background:#0e1116}dialog p{font-size:12px;color:#787b86}
 .props{bottom:84px}body:has(#ed.show) #fav{display:none!important}
 #chips{display:flex;gap:6px;flex-wrap:wrap}.chip{display:flex}.chip button:first-child{border-radius:4px 0 0 4px;border-color:#2962ff}.chip button:last-child{border-radius:0 4px 4px 0;border-left:0}
+#itpl{position:fixed;z-index:30;width:min(320px,94vw);max-height:70vh;overflow-y:auto;background:#161a23;color:#d1d4dc;border:1px solid #2d3340;border-radius:8px;box-shadow:0 8px 24px #000a;padding:6px 0}
+#itpl button{border:0;background:none;color:inherit;border-radius:0}#itpl button:hover{background:#252b38}
+#itpl>button{display:block;width:100%;text-align:left;padding:10px 14px}
+#itpl h5{margin:0;padding:8px 14px 4px;font-size:11px;font-weight:400;color:#787b86;border-top:1px solid #2d3340}
+#itpl .row{display:flex;align-items:center;padding-right:6px}#itpl .row .go{flex:1;min-width:0;text-align:left;padding:7px 14px}
+#itpl .go b,#itpl .go small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#itpl .go small{color:#787b86;font-size:11px}
+#itpl .ic{padding:6px 8px;font-size:15px}#itpl p{margin:0;padding:8px 14px;font-size:12px;color:#787b86}
 </style></head><body>
 <header>
 <b>看盤台</b><span class="sp"></span>
 <button id="dual" class="on">雙窗</button>
 <span class="sp"></span>
 <button data-ind="m7"></button><button data-ind="m21"></button><button data-ind="m60"></button><button data-ind="m200"></button>
-<button data-ind="ema">EMA</button><button data-ind="bb">布林</button><button data-ind="vol">成交量</button><button data-ind="rsi">RSI</button><button data-ind="macd">MACD</button>
+<button data-ind="ema">EMA</button><button data-ind="bb">布林</button><button data-ind="vol">成交量</button><button data-ind="rsi">RSI</button><button data-ind="macd">MACD</button><button id="itBtn">指標範本 ▾</button>
 <span class="sp"></span>
-<button id="gridBtn">網格</button><button id="edBtn">{ } 指標代碼</button><button id="tplBtn">模板</button><button id="setBtn">⚙ 設定</button><span id="chips"></span><span id="toolname"></span>
+<button id="gridBtn">網格</button><button id="edBtn">{ } 指標代碼</button><button id="tplBtn">版面模板</button><button id="setBtn">⚙ 設定</button><span id="chips"></span><span id="toolname"></span>
 <span class="stat">台灣 UTC+8｜OKX</span>
 </header>
 <div class="body"><nav id="tools"></nav><main></main></div>
@@ -993,11 +1000,55 @@ function openLayouts(){
  for(const n in layouts)d.append(el('label',{},el('span',{textContent:n}),el('span',{},el('button',{textContent:'套用',onclick:()=>{applyLayout(layouts[n]);d.close()}}),el('button',{textContent:'覆蓋',onclick:()=>{if(confirm(`用目前版面覆蓋「${n}」？`))put(n)}}),el('button',{textContent:'刪除',onclick:()=>{if(confirm(`刪除「${n}」？`)){delete layouts[n];store.set('layouts',layouts);openLayouts()}}}))));
  const file=el('input',{type:'file',accept:'.json',hidden:true,onchange:async e=>{try{const j=JSON.parse(await e.target.files[0].text());if(j.app!=='kb')throw 0;
    if(!confirm('匯入會合併模板與腳本，並覆蓋相同商品的畫線，繼續？'))return;
-   Object.assign(layouts,j.layouts);Object.assign(scripts,j.scripts);Object.assign(params,j.params);for(const k in j.drawings)drawings[k]=j.drawings[k].filter(s=>DEFS[s.type]);store.set('layouts',layouts);saveScripts();save();edList();select(null);openLayouts()}catch{alert('不是有效的看盤台備份檔')}}});
- d.append(el('h4',{textContent:'備份（換電腦或清除瀏覽器資料前請匯出）'}),el('div',{},el('button',{textContent:'匯出備份檔',onclick:()=>{const a=el('a',{href:URL.createObjectURL(new Blob([JSON.stringify({app:'kb',layouts,scripts,drawings,params},null,1)],{type:'application/json'})),download:'看盤台備份.json'});a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}}),' ',el('button',{textContent:'匯入備份檔',onclick:()=>file.click()}),file),
+   Object.assign(layouts,j.layouts);Object.assign(indtpl,j.indtpl);saveIT();Object.assign(scripts,j.scripts);Object.assign(params,j.params);for(const k in j.drawings)drawings[k]=j.drawings[k].filter(s=>DEFS[s.type]);store.set('layouts',layouts);saveScripts();save();edList();select(null);openLayouts()}catch{alert('不是有效的看盤台備份檔')}}});
+ d.append(el('h4',{textContent:'備份（換電腦或清除瀏覽器資料前請匯出）'}),el('div',{},el('button',{textContent:'匯出備份檔',onclick:()=>{const a=el('a',{href:URL.createObjectURL(new Blob([JSON.stringify({app:'kb',indtpl,layouts,scripts,drawings,params},null,1)],{type:'application/json'})),download:'看盤台備份.json'});a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}}),' ',el('button',{textContent:'匯入備份檔',onclick:()=>file.click()}),file),
   el('div',{className:'foot'},el('button',{textContent:'關閉',onclick:()=>d.close()})));
  if(!d.open)d.showModal();
 }
+// ───────── 指標範本 ─────────
+let indtpl=store.get('indtpl',{});
+const PER=['p1','p2','p3','p4','e1','e2','bn','bk','rn','mf','ms','mg'];
+const saveIT=()=>store.set('indtpl',indtpl);
+const hasIT=n=>Object.prototype.hasOwnProperty.call(indtpl,n);
+const snapIT=()=>clone({ind,per:Object.fromEntries(PER.map(k=>[k,cfg[k]])),onchart,params:Object.fromEntries(Object.keys(onchart).filter(n=>params[n]).map(n=>[n,params[n]]))});
+const descIT=t=>[...$$('[data-ind]').map(b=>b.dataset.ind).filter(k=>t.ind?.[k]).map(k=>MA[k]?'MA'+t.per[['m7','m21','m60','m200'].indexOf(k)<0?'p1':'p'+(['m7','m21','m60','m200'].indexOf(k)+1)]:IND_NAMES[k]),...Object.keys(t.onchart||{})].join(', ')||'（無指標）';
+function applyIT(n){
+ const t=indtpl[n];
+ for(const b of $$('[data-ind]'))ind[b.dataset.ind]=t.ind?.[b.dataset.ind]?1:0;
+ cfg=cleanCfg({...cfg,...t.per});onchart=clone(t.onchart||{});
+ for(const k in onchart){if(t.params?.[k])params[k]=clone(t.params[k]);else delete params[k]}
+ t.used=Date.now();saveIT();hideInd=false;applyCfg();syncView();
+}
+const closeIT=()=>$('#itpl')?.remove();
+function openIT(){
+ closeIT();
+ const box=el('div',{id:'itpl'});
+ const redraw=()=>openIT();
+ box.append(el('button',{textContent:'⤒ 儲存指標範本…',onclick:()=>{closeIT();saveDialogIT()}}));
+ const names=Object.keys(indtpl).sort((a,b)=>(indtpl[b].star|0)-(indtpl[a].star|0)||(indtpl[b].used||0)-(indtpl[a].used||0));
+ box.append(el('h5',{textContent:'最近使用'}));
+ if(!names.length)box.append(el('p',{textContent:'還沒有範本。先把指標開好，再按上面的「儲存指標範本」。'}));
+ for(const n of names){const t=indtpl[n];box.append(el('div',{className:'row'},
+  el('button',{className:'go',title:descIT(t),onclick:()=>{closeIT();applyIT(n)}},el('b',{textContent:n}),el('small',{textContent:descIT(t)})),
+  el('button',{className:'ic del',textContent:'🗑',title:'刪除範本',onclick:()=>{if(confirm(`刪除範本「${n}」？`)){delete indtpl[n];saveIT();redraw()}}}),
+  el('button',{className:'ic star',textContent:t.star?'★':'☆',title:'置頂',onclick:()=>{t.star=t.star?0:1;saveIT();redraw()}})))}
+ box.append(el('h5',{textContent:''}),el('button',{textContent:'🗀 打開版面模板…',onclick:()=>{closeIT();openLayouts()}}));
+ document.body.append(box);
+ const r=$('#itBtn').getBoundingClientRect();
+ box.style.left=Math.max(4,Math.min(r.left,innerWidth-box.offsetWidth-4))+'px';box.style.top=r.bottom+4+'px';box.style.maxHeight=Math.max(160,innerHeight-r.bottom-12)+'px';
+}
+function saveDialogIT(){
+ const d=$('#dlg');d.oncancel=null;d.textContent='';
+ const name=el('input',{type:'text',placeholder:'例如：X賽克斯X'});
+ const ok=()=>{const n=name.value.trim();if(!n||n==='__proto__')return name.focus();if(hasIT(n)&&!confirm(`覆蓋範本「${n}」？`))return;indtpl[n]={...snapIT(),star:hasIT(n)?indtpl[n].star:0,used:Date.now()};saveIT();d.close()};
+ name.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();ok()}};
+ d.append(el('h4',{textContent:'儲存指標範本'}),el('label',{},el('span',{textContent:'名稱'}),name),el('p',{textContent:'內容：'+descIT(snapIT())}),
+  el('div',{className:'foot'},el('button',{textContent:'取消',onclick:()=>d.close()}),el('button',{textContent:'儲存',className:'on',onclick:ok})));
+ if(!d.open)d.showModal();name.focus();
+}
+$('#itBtn').onclick=()=>$('#itpl')?closeIT():openIT();
+document.addEventListener('pointerdown',e=>{if(!e.target.closest('#itpl,#itBtn'))closeIT()},true);
+addEventListener('keydown',e=>{if(e.key==='Escape')closeIT()});
 syncMA();
 panes.push(new Pane(0),new Pane(1));
 favBar();
