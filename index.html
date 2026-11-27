@@ -66,18 +66,38 @@ dialog label input[type=number]{width:100px}.levels input[type=number]{width:92p
 #itpl .row{display:flex;align-items:center;padding-right:6px}#itpl .row .go{flex:1;min-width:0;text-align:left;padding:7px 14px}
 #itpl .go b,#itpl .go small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#itpl .go small{color:#787b86;font-size:11px}
 #itpl .ic{padding:6px 8px;font-size:15px}#itpl p{margin:0;padding:8px 14px;font-size:12px;color:#787b86}
+.tpos{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;width:200px}.tpos button{padding:4px 0;font-size:12px}.tpos button:last-child{grid-column:1/-1}.tpos button.on{background:#2962ff;color:#fff}
+header{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;gap:2px;padding:4px 6px;white-space:nowrap}
+header>*{flex:none}header button,#bottom button,#side button{background:none;border-color:transparent}
+header button:hover,#bottom button:hover,#side button:hover{background:#252b38}header button.on,#bottom button.on,#side button.on,header button.on:hover{background:#2962ff}
+header button{display:flex;align-items:center;gap:4px;padding:5px 8px;height:32px}
+header svg,#side svg,#bottom svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+#topSym{font-weight:700;background:#1a1f29;border-radius:16px;min-width:130px;justify-content:center}#topTf,#quick,#ranges{display:flex;gap:1px;align-items:center}#topTf button{padding:5px 7px}
+header .circ{width:28px;height:28px;border-radius:50%;border-color:#565c6b;justify-content:center;padding:0;margin:0 2px}
+.grow{flex:1 1 0!important;min-width:4px}header .grow{flex:1 0 4px!important}
+#strip{display:flex;gap:8px;align-items:center;padding:3px 8px;border-bottom:1px solid #252a34;font-size:12px}#strip:has(#chips:empty):has(#toolname:empty){display:none}
+.pop{display:none;position:fixed;z-index:30;background:#161a23;border:1px solid #2d3340;border-radius:8px;box-shadow:0 8px 24px #000a;padding:6px}.pop.show{display:flex;flex-direction:column;gap:4px}.pop h5{font-size:11px;font-weight:400;color:#787b86;padding:4px}
+.indg{display:grid;grid-template-columns:repeat(3,86px);gap:4px}#ctPop button{border:0;text-align:left;padding:7px 18px}
+#side{width:42px;display:flex;flex-direction:column;gap:2px;padding:4px 3px;border-left:1px solid #252a34;overflow-y:auto}#side button{height:36px;flex:none;display:grid;place-items:center;padding:0;position:relative}
+#side i{position:absolute;right:0;top:1px;background:#f23645;color:#fff;border-radius:8px;font:10px/15px system-ui;min-width:15px}
+#panel{display:none;width:250px;flex:none;overflow-y:auto;border-left:1px solid #252a34;font-size:12px}#panel.show{display:block}#panel p{padding:4px 10px;color:#787b86}
+.ph{display:flex;gap:4px;align-items:center;padding:8px 6px 6px 10px}.ph b{flex:1}.ph button{background:none;border:0}
+.wr{display:flex;align-items:center;border-top:1px solid #1d222c}.wr .go{flex:1;display:grid;grid-template-columns:1fr auto 62px;gap:6px;background:none;border:0;text-align:left;padding:8px 4px 8px 10px;min-width:0}.wr .go span:nth-child(n+2){text-align:right}.wr .rm{background:none;border:0;color:#787b86;padding:4px 6px}
+.add{display:flex;gap:6px;padding:4px 10px}.add input{width:100%;min-width:0}
+#bottom{display:flex;align-items:center;gap:6px;padding:2px 8px;border-top:1px solid #252a34;white-space:nowrap;overflow-x:auto;scrollbar-width:none;flex:none}#bottom>*{flex:none}#bottom button{padding:3px 7px;display:flex;align-items:center}#clock{font-variant-numeric:tabular-nums}
+.pane .bar [data-tf],.pane .bar input.sym,.pane .rbtn{display:none}.pane .bar{padding:3px 8px;flex-wrap:nowrap}.pane .bar .price{margin-left:0}.pane .bar::before{content:attr(data-title);font-weight:600}
+main:not(.one) .pane.act .bar{box-shadow:inset 0 2px #2962ff}
+.slist{display:flex;flex-direction:column;max-height:46vh;overflow-y:auto;margin-top:8px}.slist button{flex:none;text-align:left;border:0;background:none;padding:7px}.slist button:hover{background:#252b38}.sq{width:100%}
+@media(max-width:800px){#panel{position:fixed;right:42px;top:80px;bottom:34px;z-index:15;background:#0e1116}}
+#toasts{top:auto!important;bottom:44px!important;right:auto!important;left:56px!important}
 </style></head><body>
 <header>
-<b>看盤台</b><span class="sp"></span>
-<button id="dual" class="on">雙窗</button>
-<span class="sp"></span>
-<button data-ind="m7"></button><button data-ind="m21"></button><button data-ind="m60"></button><button data-ind="m200"></button>
-<button data-ind="ema">EMA</button><button data-ind="bb">布林</button><button data-ind="vol">成交量</button><button data-ind="rsi">RSI</button><button data-ind="macd">MACD</button><button id="itBtn">指標範本 ▾</button>
-<span class="sp"></span>
-<button id="gridBtn">網格</button><button id="edBtn">{ } 指標代碼</button><button id="tplBtn">版面模板</button><button id="setBtn">⚙ 設定</button><span id="chips"></span><span id="toolname"></span>
-<span class="stat">台灣 UTC+8｜OKX</span>
+<button id="topSym" title="搜尋商品" aria-label="搜尋商品">…</button><button id="plusBtn" title="加入自選清單" aria-label="加入自選清單" class="icb"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg></button><span class="sp"></span><span id="topTf"></span><span class="sp"></span><button id="ctBtn" title="圖表類型" aria-label="圖表類型" class="icb"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3v4M8 17v4M16 5v3M16 15v4"/><rect x="5.5" y="7" width="5" height="10"/><rect x="13.5" y="8" width="5" height="7"/></svg></button><span class="sp"></span><button id="indBtn" title="指標" aria-label="指標"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17l5-6 4 3 6-8M4 21v-2M9 21v-5M14 21v-4M19 21v-7"/></svg>指標</button><button id="itBtn">指標範本 ▾</button><span id="quick"></span><span class="sp"></span><button id="alBtn" title="快訊" aria-label="快訊"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M4 5l3-2M20 5l-3-2"/></svg>快訊</button><button id="rpBtn" title="回放" aria-label="回放"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 6l-8 6 8 6zM21 6l-8 6 8 6z"/></svg>回放</button><span class="sp"></span><button id="undoBtn" title="復原 (Ctrl+Z)" aria-label="復原 (Ctrl+Z)" class="icb"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5L4 10l5 5M4 10h10a6 6 0 010 10h-3"/></svg></button><button id="redoBtn" title="重做 (Ctrl+Y)" aria-label="重做 (Ctrl+Y)" class="icb"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l5 5-5 5M20 10H10a6 6 0 000 10h3"/></svg></button><span class="sp"></span><button id="dual" title="單窗／雙窗" aria-label="單窗／雙窗" class="icb on"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="1"/><path d="M12 5v14"/></svg></button><button id="tplBtn" title="版面模板">版面模板</button><span class="grow"></span><button id="findBtn" title="搜尋商品" aria-label="搜尋商品" class="icb"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.500L21 21"/></svg></button><button id="setBtn" title="設定" aria-label="設定" class="icb"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l8 4.5v9L12 21l-8-4.500v-9z"/><circle cx="12" cy="12" r="3"/></svg></button><button id="fullBtn" title="全螢幕" aria-label="全螢幕" class="icb"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg></button><button id="shotBtn" title="截圖下載" aria-label="截圖下載" class="icb"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8h4l2-3h6l2 3h4v11H3z"/><circle cx="12" cy="13" r="3.5"/></svg></button>
 </header>
-<div class="body"><nav id="tools"></nav><main></main></div>
+<div id="strip"><span id="chips"></span><span id="toolname"></span></div>
+<div id="indPop" class="pop"><h5>內建指標（點一下開關）</h5><div class="indg"><button data-ind="m7"></button><button data-ind="m21"></button><button data-ind="m60"></button><button data-ind="m200"></button><button data-ind="ema">EMA</button><button data-ind="bb">布林</button><button data-ind="vol">成交量</button><button data-ind="rsi">RSI</button><button data-ind="macd">MACD</button></div><h5>自訂指標</h5><button id="edBtn">{ } 指標代碼</button></div><div id="ctPop" class="pop"></div>
+<div class="body"><nav id="tools"></nav><main></main><aside id="panel"></aside><nav id="side"><button id="sWatch" title="自選清單" aria-label="自選清單"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h14v18l-7-4-7 4z"/><path d="M9 8h6M9 11h6"/></svg></button><button id="sAlert" title="快訊清單" aria-label="快訊清單"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 17V10a6 6 0 0112 0v7l2 1H4zM10 21h4"/></svg><i style="display:none"></i></button><button id="sTree" title="物件樹" aria-label="物件樹"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9 5-9 5-9-5zM3 13l9 5 9-5"/></svg></button><button id="sCode" title="指標代碼" aria-label="指標代碼"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6l-5 6 5 6M16 6l5 6-5 6M14 4l-4 16"/></svg></button><button id="sTpl" title="版面模板與備份" aria-label="版面模板與備份"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="8" height="8"/><rect x="13" y="3" width="8" height="8"/><rect x="3" y="13" width="8" height="8"/><rect x="13" y="13" width="8" height="8"/></svg></button><span class="grow"></span><button id="sHelp" title="操作說明" aria-label="操作說明"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.500 9.500a2.500 2.500 0 115 0c0 2-2.500 2-2.500 4M12 17v.5"/></svg></button></nav></div>
+<footer id="bottom"><span id="ranges"></span><span class="sp"></span><button id="gotoBtn" title="跳到日期" aria-label="跳到日期" class="icb"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="1"/><path d="M3 10h18M8 3v4M16 3v4M8 15h7M12 12l3 3-3 3"/></svg></button><span class="grow"></span><button id="gridBtn">網格</button><span class="stat">OKX</span><span id="clock"></span></footer>
 <section id="ed"><div class="edbar"><b>指標代碼</b><input id="edName" aria-label="腳本名稱"><button id="edAdd" class="on">▷ 新增到圖表</button><button id="edSave">儲存</button><button id="edNew">新增空白</button><select id="edSel"></select><button id="edDel">刪除</button><button id="edClose">✕</button></div><textarea id="edCode" spellcheck="false" aria-label="指標代碼"></textarea><div id="edMsg"></div></section><dialog id="dlg"></dialog><div id="fav"></div><div id="toasts"></div>
 <datalist id="syms"><option>BTC-USDT-SWAP<option>ETH-USDT-SWAP<option>SOL-USDT-SWAP<option>XRP-USDT-SWAP<option>DOGE-USDT-SWAP<option>BNB-USDT-SWAP<option>BTC-USDT<option>ETH-USDT</datalist>
 <script>/*!
@@ -92,22 +112,23 @@ dialog label input[type=number]{width:100px}.levels input[type=number]{width:92p
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const store={get(k,d){try{return JSON.parse(localStorage.getItem('kb_'+k))??d}catch{return d}},set(k,v){try{localStorage.setItem('kb_'+k,JSON.stringify(v))}catch{}}};
 const REST='https://www.okx.com/api/v5/market/', WS='wss://ws.okx.com:8443/ws/v5/business';
-const TF={'1m':60,'5m':300,'15m':900,'30m':1800,'1H':3600,'4H':14400,'1Dutc':86400};
+const TF={'1m':60,'3m':180,'5m':300,'15m':900,'30m':1800,'1H':3600,'4H':14400,'1Dutc':86400,'1Wutc':604800,'1Mutc':2592000};
 const MA={m7:[7,'#f6c343'],m21:[21,'#29b6f6'],m60:[60,'#ab47bc'],m200:[200,'#ef5350']};
 const syncMA=()=>Object.keys(MA).forEach((k,i)=>MA[k][0]=cfg['p'+(i+1)]);
 const ind=store.get('ind',{m7:1,m21:1,m60:1,m200:1,bb:0,vol:1});
-let drawings=store.get('draw',{}), tool='', history_=[], magnet=false, locked=false, hidden=false, hideInd=false, sel=null, active=0;
+let drawings=store.get('draw',{}), tool='', history_=[], redo_=[], magnet=false, locked=false, hidden=false, hideInd=false, sel=null, active=0;
 const uid=()=>Math.random().toString(36).slice(2,9);
 for(const k in drawings)drawings[k]=drawings[k].map(s=>s.pts?s:{id:uid(),type:{h:'hline',t:'trend',f:'fib'}[s.type],pts:s.b?[s.a,s.b]:[s.a],color:{h:'#ffd54f',t:'#4fc3f7',f:'#90a4ae'}[s.type],width:1.5,text:''});
 const DARK={bg:'#0e1116',grid:'#1b202a',txt:'#9598a1',up:'#26a69a',dn:'#ef5350'},LIGHT={bg:'#ffffff',grid:'#eef0f3',txt:'#333333',up:'#089981',dn:'#f23645'};
 const DEF={...DARK,showGrid:true,p1:7,p2:21,p3:60,p4:200,e1:12,e2:26,bn:20,bk:2,rn:14,mf:12,ms:26,mg:9};
 let cfg={...DEF,...store.get('cfg',{})};
 const save=()=>store.set('draw',drawings);
-const snapshot=sym=>{history_.push([sym,JSON.stringify(drawings[sym]||[])]);if(history_.length>100)history_.shift()};
+const snapshot=sym=>{history_.push([sym,JSON.stringify(drawings[sym]||[])]);redo_.length=0;if(history_.length>100)history_.shift()};
 const ema=(v,n)=>{const o=[],k=2/(n+1);let e=null,s=0,c=0;for(const x of v){if(x==null){o.push(null);continue}if(e==null){s+=x;if(++c===n)e=s/n}else e=x*k+e*(1-k);o.push(e)}return o};
 const rsi=(d,n)=>{const o=[null];let g=0,l=0;for(let i=1;i<d.length;i++){const c=d[i].close-d[i-1].close,u=Math.max(c,0),w=Math.max(-c,0);if(i<=n){g+=u/n;l+=w/n}else{g=(g*(n-1)+u)/n;l=(l*(n-1)+w)/n}o.push(i<n?null:l===0?100:100-100/(1+g/l))}return o};
 const al=(d,v,f)=>d.map((x,i)=>v[i]==null?{time:x.time}:{time:x.time,value:v[i],...(f?f(v[i]):{})});
 const panes=[];
+let ctype=store.get('ctype','candle');
 
 const sma=(a,n)=>{const o=[];let s=0;for(let i=0;i<a.length;i++){s+=a[i].close;if(i>=n)s-=a[i-n].close;if(i>=n-1)o.push({time:a[i].time,value:s/n})}return o};
 const boll=(a,n=20,k=2)=>{const m=[],u=[],l=[];for(let i=n-1;i<a.length;i++){const w=a.slice(i-n+1,i+1).map(x=>x.close),av=w.reduce((p,c)=>p+c,0)/n,sd=Math.sqrt(w.reduce((p,c)=>p+(c-av)**2,0)/n),time=a[i].time;m.push({time,value:av});u.push({time,value:av+k*sd});l.push({time,value:av-k*sd})}return[m,u,l]};
@@ -159,7 +180,30 @@ function render(g,pane,s,z,pw,ph){
  const stats=()=>`${q1.p>=q0.p?'+':''}${f(q1.p-q0.p)} (${((q1.p/q0.p-1)*100).toFixed(2)}%)`;
  const dur=()=>{const m=Math.abs(q1.t-q0.t)/60;return m>=1440?(m/1440).toFixed(1)+' 天':m>=60?(m/60).toFixed(1)+' 小時':Math.round(m)+' 分'};
  const levels=()=>(s.levels||[]).filter(l=>l.on);
- const name=()=>{if(s.text&&!['text','note','pin','table','callout','comment','signpost','pricenote','hline','long','short'].includes(t))text(s.text,Math.min(...P.map(p=>p.x))+4,Math.min(...P.map(p=>p.y))-6)};
+ // 指定文字位置：s.tpos = 上中下(t/m/b) + 左中右(l/c/r)，未指定則用各工具原本位置
+ const POS=s.tpos,pv=POS?.[0],ph_=POS?.[1];
+ const dim=str=>{const l=String(str).split('\n');return{w:Math.max(...l.map(x=>g.measureText(x).width)),h:l.length*(size+3)}};
+ // 以某一點為基準，回傳文字區塊左上角
+ const at=(p,w,h,gap=8)=>P_(ph_==='l'?p.x-w-gap:ph_==='r'?p.x+gap:p.x-w/2,pv==='t'?p.y-h-gap:pv==='b'?p.y+gap:p.y-h/2);
+ const put=(str,x,y,color,back)=>{const{w,h}=dim(str);if(back){g.fillStyle=cfg.bg;g.fillRect(x-3,y,w+6,h)}text(str,x,y+size,color)};
+ const note=(str,p,bg)=>{const{w,h}=dim(str),o=at(p,w+14,h+8,10);bubble(str,o.x,o.y,bg);return{x:o.x+(w+14)/2,y:o.y+(h+8)/2}};
+ const name=()=>{
+  if(!s.text||['text','note','pin','table','callout','comment','signpost','pricenote'].includes(t))return;
+  if(!POS){if(!['hline','long','short'].includes(t))text(s.text,Math.min(...P.map(p=>p.x))+4,Math.min(...P.map(p=>p.y))-6);return}
+  const{w,h}=dim(s.text),c=col;
+  if(t==='vline'){const y=pv==='t'?6:pv==='b'?ph-h-6:(ph-h)/2,x=ph_==='l'?a.x-w-6:ph_==='r'?a.x+6:a.x-w/2;put(s.text,x,y,c,ph_==='c');return}
+  const flat=['hline','hray','cross'].includes(t);
+  if(flat||['trend','ray','info','extended','angle','arrow'].includes(t)){
+   let p=a,q=b;if(t==='hline'||t==='cross'){p=P_(0,a.y);q=P_(pw,a.y)}else if(t==='hray'){p=a;q=P_(pw,a.y)}else if(p.x>q.x)[p,q]=[q,p];
+   const x0=Math.max(0,p.x),x1=Math.max(x0,Math.min(pw,q.x)),x=ph_==='l'?x0+6:ph_==='r'?x1-w-(flat?70:6):(x0+x1-w)/2;
+   const m=x+w/2,y=q.x===p.x?(p.y+q.y)/2:p.y+(q.y-p.y)*(m-p.x)/(q.x-p.x),slope=q.x===p.x?0:Math.abs((q.y-p.y)/(q.x-p.x))*w/2;
+   put(s.text,x,pv==='t'?y-slope-h-3:pv==='b'?y+slope+3:y-h/2,c,pv==='m');return}
+  // 圖形類：放在圖形範圍內
+  const pts=[...z.seg.flat(),...z.box.flatMap(([x,y,bw,bh])=>[P_(x,y),P_(x+bw,y+bh)])];if(!pts.length)pts.push(...P);
+  const clamp=(v,n)=>Math.max(0,Math.min(n,v)),xs=pts.map(p=>clamp(p.x,pw)),ys=pts.map(p=>clamp(p.y,ph));
+  const x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys);
+  put(s.text,ph_==='l'?x0+6:ph_==='r'?x1-w-6:(x0+x1-w)/2,pv==='t'?y0+4:pv==='b'?y1-h-4:(y0+y1-h)/2,txtCol);
+ };
  const waves=labels=>{path(P);P.forEach((p,i)=>{const up=i?p.y<P[i-1].y:P[1]&&p.y<P[1].y;if(labels[i])text(labels[i],p.x,p.y+(up?-9:size+6),col,'center')})};
  const ratio=(i,j,k,l)=>{const d=Math.abs(s.pts[j]?.p-s.pts[i]?.p);return d&&s.pts[l]?(Math.abs(s.pts[l].p-s.pts[k].p)/d).toFixed(3):''};
  const dashed=(i,j,label)=>{if(!P[i]||!P[j])return;g.setLineDash([3,3]);line(P[i],P[j]);style();const m=mid(P[i],P[j]);if(label)bubble(label,m.x-18,m.y-10,col)};
@@ -170,7 +214,7 @@ function render(g,pane,s,z,pw,ph){
  case'extended':both(a,b);break;
  case'info':line(a,b);bubble(`${stats()}\n${bars()} 根，${dur()}\n角度 ${(Math.atan2(a.y-b.y,b.x-a.x)*180/Math.PI).toFixed(1)}°`,b.x+8,b.y,hex(col,.9));break;
  case'angle':{line(a,b);const k=Math.atan2(b.y-a.y,b.x-a.x);g.setLineDash([3,3]);line(a,P_(a.x+60,a.y));ell(a.x,a.y,40,40,0,k);style();text((-k*180/Math.PI).toFixed(1)+'°',a.x+46,a.y+(k<0?-4:size));break}
- case'hline':{const tw=s.text?g.measureText(s.text).width+16:0,m=pw/2;if(tw){line(P_(0,a.y),P_(m-tw/2,a.y));line(P_(m+tw/2,a.y),P_(pw,a.y));text(s.text,m,a.y+size/3,col,'center')}else line(P_(0,a.y),P_(pw,a.y));text(f(q0.p),pw-4,a.y-4,col,'right');break}
+ case'hline':{const tw=s.text&&!POS?g.measureText(s.text).width+16:0,m=pw/2;if(tw){line(P_(0,a.y),P_(m-tw/2,a.y));line(P_(m+tw/2,a.y),P_(pw,a.y));text(s.text,m,a.y+size/3,col,'center')}else line(P_(0,a.y),P_(pw,a.y));text(f(q0.p),pw-4,a.y-4,col,'right');break}
  case'hray':line(a,P_(pw+9999,a.y));text(f(q0.p),pw-4,a.y-4,col,'right');break;
  case'vline':line(P_(a.x,0),P_(a.x,ph));break;
  case'cross':line(P_(0,a.y),P_(pw,a.y));line(P_(a.x,0),P_(a.x,ph));break;
@@ -219,7 +263,7 @@ function render(g,pane,s,z,pw,ph){
  case'sine':{const d=b.x-a.x||1,m=(a.y+b.y)/2,A=(a.y-b.y)/2,pts=[];for(let x=0;x<=pw;x+=3)pts.push(P_(x,m+A*Math.cos((x-a.x)/d*Math.PI)));path(pts);break}
  case'long':case'short':{const[en,tp,sl]=s.pts.map(q=>q.p),[ye,yt,ys]=P.map(p=>p.y),x=a.x,w=b.x-a.x,tx=Math.min(x,x+w)+4,pc=v=>((v/en-1)*100).toFixed(2)+'%',rr=Math.abs(tp-en)/(Math.abs(en-sl)||1);
   box(x,ye,w,yt-ye,'#26a69a33');box(x,ye,w,ys-ye,'#ef535033');line(P_(x,ye),P_(x+w,ye));
-  text(`目標 ${f(tp)} (${pc(tp)})`,tx,yt+(yt<ye?size+2:-5),'#26a69a');text(`${t==='long'?'多':'空'} ${f(en)}  RR 1:${rr.toFixed(2)} ${s.text}`,tx,ye-5,txtCol);text(`停損 ${f(sl)} (${pc(sl)})`,tx,ys+(ys<ye?size+2:-5),'#ef5350');
+  text(`目標 ${f(tp)} (${pc(tp)})`,tx,yt+(yt<ye?size+2:-5),'#26a69a');text(`${t==='long'?'多':'空'} ${f(en)}  RR 1:${rr.toFixed(2)} ${POS?'':s.text}`,tx,ye-5,txtCol);text(`停損 ${f(sl)} (${pc(sl)})`,tx,ys+(ys<ye?size+2:-5),'#ef5350');
   if(s.risk>0&&en!==sl)text(`風險 ${s.risk} → 數量 ${+(s.risk/Math.abs(en-sl)).toPrecision(5)}（幣）`,tx,ye+size+2,txtCol);break}
  case'forecast':g.setLineDash([6,4]);line(a,b);style();head(a,b);bubble(`起 ${f(q0.p)}`,a.x-30,a.y+8,hex(col,.9));bubble(`${f(q1.p)}\n${stats()} / ${dur()}`,b.x+8,b.y-10,hex(col,.9));break;
  case'barspattern':{box(a.x,Math.min(a.y,b.y),b.x-a.x,Math.abs(b.y-a.y),null,hex(col,.5));const d=pane.slice(q0.t,q1.t);if(!d.length||s.pts.length<3)break;const l0=pane.toLogical(q2.t),ts=pane.chart.timeScale(),off=q2.p-d[0].open,bw=Math.max(1,ts.options().barSpacing*.6);
@@ -252,16 +296,16 @@ function render(g,pane,s,z,pw,ph){
  case'polyline':path(P,P.length>2,hex(col,fa));break;
  case'triangle':path([a,b,c],true,hex(col,fa));break;
  case'arc':case'curve':{const ctrl=t==='arc'?sub(mul(c,2),mid(a,b)):c,pts=[];for(let i=0;i<=40;i++){const k=i/40,m=1-k;pts.push(P_(m*m*a.x+2*m*k*ctrl.x+k*k*b.x,m*m*a.y+2*m*k*ctrl.y+k*k*b.y))}path(pts,false,t==='arc'?hex(col,fa):null);break}
- case'text':text(s.text||'文字',a.x,a.y);break;
- case'note':box(a.x-9,a.y-9,18,18,col);text('✎',a.x,a.y+5,'#fff','center');bubble(s.text||'筆記',a.x+14,a.y-12,hex(col,.9));break;
- case'pricenote':line(a,b);bubble(`${f(q0.p)}${s.text?'\n'+s.text:''}`,b.x,b.y-14,hex(col,.95));break;
- case'pin':ell(a.x,a.y-18,8,8,0,Math.PI*2,col,col);line(P_(a.x,a.y-10),a);text(s.text,a.x,a.y-32,col,'center');break;
- case'table':{const rows=(s.text||'').split('\n').map(r=>r.split('|')),n=Math.max(...rows.map(r=>r.length)),ws=Array.from({length:n},(_,i)=>Math.max(40,...rows.map(r=>g.measureText(r[i]||'').width+14))),hh=size+10;let y=a.y;
-  for(const r of rows){let x=a.x;ws.forEach((w,i)=>{box(x,y,w,hh,cfg.bg,col);text(r[i]||'',x+7,y+size+3,txtCol);x+=w});y+=hh}break}
- case'callout':line(a,b);bubble(s.text||'標註',b.x,b.y-14,hex(col,.95));break;
- case'comment':{const r=bubble(s.text||'評論',a.x+8,a.y-size-22,hex(col,.95));path([a,P_(a.x+10,a.y-size-22+r.h),P_(a.x+22,a.y-size-22+r.h)],true,col,col,false);break}
+ case'text':{const str=s.text||'文字';if(!POS)text(str,a.x,a.y);else{const d=dim(str),o=at(a,d.w,d.h,6);put(str,o.x,o.y)}break}
+ case'note':box(a.x-9,a.y-9,18,18,col);text('✎',a.x,a.y+5,'#fff','center');POS?note(s.text||'筆記',a,hex(col,.9)):bubble(s.text||'筆記',a.x+14,a.y-12,hex(col,.9));break;
+ case'pricenote':{line(a,b);const str=`${f(q0.p)}${s.text?'\n'+s.text:''}`;POS?note(str,b,hex(col,.95)):bubble(str,b.x,b.y-14,hex(col,.95));break}
+ case'pin':ell(a.x,a.y-18,8,8,0,Math.PI*2,col,col);line(P_(a.x,a.y-10),a);if(!POS)text(s.text,a.x,a.y-32,col,'center');else if(s.text){const d=dim(s.text),o=at(P_(a.x,a.y-16),d.w,d.h,14);put(s.text,o.x,o.y)}break;
+ case'table':{const rows=(s.text||'').split('\n').map(r=>r.split('|')),n=Math.max(...rows.map(r=>r.length)),ws=Array.from({length:n},(_,i)=>Math.max(40,...rows.map(r=>g.measureText(r[i]||'').width+14))),hh=size+10;const o=POS?at(a,ws.reduce((p,w)=>p+w,0),rows.length*hh,6):a;let y=o.y;
+  for(const r of rows){let x=o.x;ws.forEach((w,i)=>{box(x,y,w,hh,cfg.bg,col);text(r[i]||'',x+7,y+size+3,txtCol);x+=w});y+=hh}break}
+ case'callout':line(a,b);POS?note(s.text||'標註',b,hex(col,.95)):bubble(s.text||'標註',b.x,b.y-14,hex(col,.95));break;
+ case'comment':{if(POS){line(a,note(s.text||'評論',a,col));break}const r=bubble(s.text||'評論',a.x+8,a.y-size-22,hex(col,.95));path([a,P_(a.x+10,a.y-size-22+r.h),P_(a.x+22,a.y-size-22+r.h)],true,col,col,false);break}
  case'pricelabel':{path([a,P_(a.x+12,a.y-14),P_(a.x+24,a.y-14)],true,col,col,false);bubble(f(q0.p),a.x+6,a.y-size-24,col);break}
- case'signpost':line(a,P_(a.x,a.y-34));bubble(s.text||'指示牌',a.x-g.measureText(s.text||'指示牌').width/2-7,a.y-34-size-11,hex(col,.95));break;
+ case'signpost':if(POS){line(a,note(s.text||'指示牌',a,hex(col,.95)));break}line(a,P_(a.x,a.y-34));bubble(s.text||'指示牌',a.x-g.measureText(s.text||'指示牌').width/2-7,a.y-34-size-11,hex(col,.95));break;
  case'flag':line(a,P_(a.x,a.y-28));path([P_(a.x,a.y-28),P_(a.x+20,a.y-22),P_(a.x,a.y-15)],true,col);box(a.x,a.y-28,20,28);break;
  }
  g.setLineDash([]);name();
@@ -275,7 +319,7 @@ function alertPrices(pane,s){
  return[];
 }
 const canAlert=s=>['hline','hray','cross','pricelabel','fib','trend','ray','extended'].includes(s.type);
-function notify(msg){const d=document.createElement('div');d.className='toast';d.textContent='⏰ '+msg+'（點此關閉）';d.onclick=()=>d.remove();$('#toasts').append(d);try{const a=new AudioContext(),o=a.createOscillator();o.connect(a.destination);o.frequency.value=880;o.start();o.stop(a.currentTime+.4)}catch{}}
+function notify(msg){fired.push(new Date(Date.now()+28800000).toISOString().slice(5,16).replace('T',' ')+'　'+msg);if(panel==='alert')openPanel('alert');else{unread++;badge()}const d=document.createElement('div');d.className='toast';d.textContent='⏰ '+msg+'（點此關閉）';d.onclick=()=>d.remove();$('#toasts').append(d);try{const a=new AudioContext(),o=a.createOscillator();o.connect(a.destination);o.frequency.value=880;o.start();o.stop(a.currentTime+.4)}catch{}}
 // ───────── Pine 常用語法子集：自行解析逐根執行（不使用 eval） ─────────
 function pineCompile(code){
  const lines=[];let buf=null;
@@ -464,7 +508,7 @@ class Pane{
   $('main').append(el);
   this.wrap=el.querySelector('.wrap');this.cv=el.querySelector('canvas');this.legend=el.querySelector('.legend');
   const L=LightweightCharts;
-  this.chart=L.createChart(el.querySelector('.chart'),{autoSize:true,layout:{background:{color:'#0e1116'},textColor:'#9598a1'},grid:{vertLines:{color:'#1b202a'},horzLines:{color:'#1b202a'}},crosshair:{mode:L.CrosshairMode.Normal},timeScale:{timeVisible:true,secondsVisible:false,rightOffset:8},localization:{locale:'zh-TW',dateFormat:'yyyy-MM-dd'}});
+  this.chart=L.createChart(el.querySelector('.chart'),{autoSize:true,layout:{background:{color:'#0e1116'},textColor:'#9598a1'},grid:{vertLines:{color:'#1b202a'},horzLines:{color:'#1b202a'}},crosshair:{mode:L.CrosshairMode.Normal},timeScale:{timeVisible:true,secondsVisible:false,rightOffset:8,minBarSpacing:.05},localization:{locale:'zh-TW',dateFormat:'yyyy-MM-dd'}});
   this.candle=this.chart.addCandlestickSeries({upColor:'#26a69a',downColor:'#ef5350',borderVisible:false,wickUpColor:'#26a69a',wickDownColor:'#ef5350'});
   this.vol=this.chart.addHistogramSeries({priceScaleId:'v',priceFormat:{type:'volume'},lastValueVisible:false,priceLineVisible:false});
   this.chart.priceScale('right').applyOptions({minimumWidth:80});
@@ -502,7 +546,7 @@ class Pane{
    this.prec=prec;this.render();
    this.chart.priceScale('right').applyOptions({autoScale:true});
    this.chart.timeScale().setVisibleLogicalRange({from:this.data.length-140,to:this.data.length+8});
-   this.startWS(gen);this.backfill(gen,q);
+   this.startWS(gen);this.bf=this.backfill(gen,q);
   }catch(e){if(gen===this.gen){this.msg=`載入失敗：${e.message}（確認代號與網路，5 秒後重試）`;setTimeout(()=>{if(gen===this.gen)this.load()},5000)}}
   if(gen===this.gen){this.busy=false;this.info()}
  }
@@ -544,6 +588,11 @@ class Pane{
   this.chart.applyOptions({layout:{background:{color:cfg.bg},textColor:cfg.txt},grid:{vertLines:{color:cfg.grid,visible:cfg.showGrid},horzLines:{color:cfg.grid,visible:cfg.showGrid}}});
   this.candle.applyOptions({upColor:cfg.up,downColor:cfg.dn,wickUpColor:cfg.up,wickDownColor:cfg.dn});
   this.wrap.style.background=cfg.bg;this.legend.style.color=cfg.txt;
+  const none='rgba(0,0,0,0)',plain=ctype==='candle',hollow=ctype==='hollow',other=!plain&&!hollow;
+  this.candle.applyOptions({upColor:plain?cfg.up:none,downColor:other?none:cfg.dn,borderVisible:hollow,borderUpColor:cfg.up,borderDownColor:cfg.dn,wickVisible:!other,lastValueVisible:!other,priceLineVisible:!other});
+  if(this.alt){this.chart.removeSeries(this.alt);this.alt=null}
+  if(other){const o=ctype==='bar'?{upColor:cfg.up,downColor:cfg.dn,thinBars:false}:ctype==='line'?{color:'#2962ff',lineWidth:2}:{lineColor:'#2962ff',topColor:'#2962ff66',bottomColor:'#2962ff08',lineWidth:2};
+   this.alt=this.chart[ctype==='bar'?'addBarSeries':ctype==='line'?'addLineSeries':'addAreaSeries'](o)}
   for(const k in this.subs)this.dropSub(k);
  }
  dropSub(k){const s=this.subs[k];if(s){s.chart.remove();s.el.remove();delete this.subs[k]}}
@@ -560,6 +609,7 @@ class Pane{
   const I=hideInd?{}:ind;
   const d=this.view(),close=d.map(x=>x.close);
   this.candle.setData(d);
+  if(this.alt){const pr=this.prec??2;this.alt.applyOptions({priceFormat:{type:'price',precision:pr,minMove:10**-pr}});this.alt.setData(ctype==='bar'?d:d.map(x=>({time:x.time,value:x.close})))}
   this.vol.setData(I.vol?d.map(x=>({time:x.time,value:x.vol,color:(x.close>=x.open?cfg.up:cfg.dn)+'66'})):[]);
   for(const k in MA)this.ma[k].setData(I[k]?sma(d,MA[k][0]):[]);
   this.ema.forEach((s,i)=>s.setData(I.ema?al(d,ema(close,cfg['e'+(i+1)])):[]));
@@ -745,7 +795,9 @@ function select(s,pane){
   el('button',{textContent:'⚙ 設定',onclick:()=>openProps(pane,s)}),el('button',{textContent:s.lock?'🔒':'🔓',title:'鎖定',onclick:()=>{change(()=>s.lock=!s.lock);select(s,pane)}}),el('button',{textContent:'🗑',title:'移除',onclick:removeSel}));
 }
 function removeSel(){if(!sel)return;const{s,pane}=sel;if(s.lock||locked)return;snapshot(pane.sym);drawings[pane.sym]=drawings[pane.sym].filter(x=>x!==s);save();select(null)}
-function undo(){const h=history_.pop();if(h){drawings[h[0]]=JSON.parse(h[1]);save();select(null)}}
+function restore(from,to){const h=from.pop();if(h){to.push([h[0],JSON.stringify(drawings[h[0]]||[])]);drawings[h[0]]=JSON.parse(h[1]);save();select(null)}}
+function undo(){restore(history_,redo_)}
+function redo(){restore(redo_,history_)}
 const copyOf=s=>({...JSON.parse(JSON.stringify(s)),id:uid(),alert:false,lock:false});
 function paste(pane,src,at){
  if(!src)return;const s=copyOf(src),a=s.pts[0],to=at?pane.pointAt(at,false):{t:pane.toTime(pane.toLogical(a.t)+3),p:a.p},dl=pane.toLogical(to.t)-pane.toLogical(a.t),dp=to.p-a.p;
@@ -775,7 +827,8 @@ function openMenu(x,y,pane,s,at){
  showMenu([
   ...(s.type==='fib'||s.type==='fibext'?[[s.trend===false?'顯示趨勢線':'隱藏趨勢線',()=>change(()=>s.trend=s.trend===false)],[s.fill===false?'顯示背景':'關閉背景',()=>change(()=>s.fill=s.fill===false)],null]:[]),
   [s.alert?'取消快訊':'新增快訊',canAlert(s)&&(()=>change(()=>s.alert=!s.alert)),'Alt+A'],null,
-  ['範本',null,'',[['存為此工具預設',()=>{const{color,width,dash,alpha,size,levels,extL,extR,reverse,showV,showP,labelRight,fill,trend,bins,risk}=s;templates[s.type]=JSON.parse(JSON.stringify({color,width,dash,alpha,size,levels,extL,extR,reverse,showV,showP,labelRight,fill,trend,bins,risk}));store.set('tpl',templates)}],['清除此工具預設',()=>{delete templates[s.type];store.set('tpl',templates)}],...(s.levels?[null,...setsOf(s.type).map(n=>['套用：'+n,()=>change(()=>loadFibSet(s,n))]),['另存新範本…',()=>{const n=prompt('範本名稱');if(n)saveFibSet(s,n)}]]:[])]],
+  ['範本',null,'',[['存為此工具預設',()=>{const{color,width,dash,alpha,size,levels,extL,extR,reverse,showV,showP,labelRight,fill,trend,bins,risk,tpos}=s;templates[s.type]=JSON.parse(JSON.stringify({color,width,dash,alpha,size,levels,extL,extR,reverse,showV,showP,labelRight,fill,trend,bins,risk,tpos}));store.set('tpl',templates)}],['清除此工具預設',()=>{delete templates[s.type];store.set('tpl',templates)}],...(s.levels?[null,...setsOf(s.type).map(n=>['套用：'+n,()=>change(()=>loadFibSet(s,n))]),['另存新範本…',()=>{const n=prompt('範本名稱');if(n)saveFibSet(s,n)}]]:[])]],
+  ['文字位置',null,'',[...[...TPOS,['','原本位置']].map(([v,n])=>[((s.tpos||'')===v?'✓ ':'')+n,()=>{change(()=>{if(v)s.tpos=v;else delete s.tpos});if(!s.text&&!['text','note','table','callout','comment','signpost','pricenote'].includes(s.type))openProps(pane,s)}])]],
   ['視覺順序',null,'',[['移到最上層',()=>move(()=>l.length)],['移到最下層',()=>move(()=>0)],['上移一層',()=>move(i=>i+1)],['下移一層',()=>move(i=>i-1)]]],
   ['時間週期的可見性',null,'',[['所有週期顯示',()=>change(()=>delete s.tfs)],[`只在 ${pane.tf.replace('utc','')} 顯示`,()=>change(()=>s.tfs=[pane.tf])],['自訂…',()=>openProps(pane,s)]]],
   ['物件樹',()=>openTree(pane)],null,
@@ -784,7 +837,7 @@ function openMenu(x,y,pane,s,at){
   ['設定…',()=>openProps(pane,s)]],x,y);
 }
 let fibsets=store.get('fibsets',{});
-const FIBKEYS=['color','width','dash','alpha','size','levels','extL','extR','reverse','showV','showP','labelRight','fill','trend'];
+const FIBKEYS=['color','width','dash','alpha','size','levels','extL','extR','reverse','showV','showP','labelRight','fill','trend','tpos'];
 const setsOf=t=>Object.keys(fibsets[t]||{});
 const saveSets=()=>store.set('fibsets',fibsets);
 function saveFibSet(s,name){
@@ -802,6 +855,7 @@ function openTree(pane){
  d.append(el('button',{textContent:'關閉',onclick:()=>d.close()}));if(!d.open)d.showModal();
 }
 // 單一畫線設定視窗（即時預覽，可取消）
+const TPOS=[['tl','左上'],['tc','置頂'],['tr','右上'],['ml','靠左'],['mc','置中'],['mr','靠右'],['bl','左下'],['bc','置下'],['br','右下']];
 function openProps(pane,s,keep){
  const d=$('#dlg');if(d.open)d.close();d.textContent='';const before=keep?.before??JSON.stringify(s),all=keep?.all??JSON.stringify(drawings[pane.sym]||[]);
  const row=(label,node)=>d.append(el('label',{},el('span',{textContent:label}),node));
@@ -815,6 +869,10 @@ function openProps(pane,s,keep){
  row('填色透明度 0~1',num(s.alpha??.15,v=>s.alpha=Math.max(0,Math.min(1,v))));
  row('文字大小',num(s.size||13,v=>s.size=Math.max(8,Math.min(40,v))));
  row('文字',el('textarea',{value:s.text,rows:2,oninput:e=>s.text=e.target.value}));
+ const grid=el('div',{className:'tpos'});
+ const mark=()=>[...grid.children].forEach(x=>x.classList.toggle('on',(x.dataset.v||'')===(s.tpos||'')));
+ for(const[v,n]of[...TPOS,['','原本位置']]){const bt=el('button',{type:'button',textContent:n,onclick:()=>{if(v)s.tpos=v;else delete s.tpos;mark()}});bt.dataset.v=v;grid.append(bt)}
+ mark();row('文字位置',grid);
  if(s.type==='long'||s.type==='short')row('風險金額(USDT)',num(s.risk||'',v=>s.risk=v));
  if(s.type==='frvp'||s.type==='avp')row('分層數',num(s.bins||24,v=>s.bins=Math.max(5,Math.min(100,Math.round(v)))));
  if(s.type==='rect')row('向右延伸',check(!!s.extR,v=>s.extR=v));
@@ -848,7 +906,7 @@ function openProps(pane,s,keep){
  d.append(el('div',{className:'tfs'},...Object.keys(TF).map(k=>el('span',{},check(!s.tfs||s.tfs.includes(k),v=>{const set=new Set(s.tfs||Object.keys(TF));v?set.add(k):set.delete(k);s.tfs=[...set]}),k.replace('utc','')))));
  let done=false;
  const cancel=()=>{if(done)return;done=true;const o=JSON.parse(before);Object.keys(s).forEach(k=>delete s[k]);Object.assign(s,o);d.close();select(s,pane)};
- const ok=()=>{done=true;if(JSON.stringify(s)!==before){history_.push([pane.sym,all]);save()}d.close();select(s,pane)};
+ const ok=()=>{done=true;if(JSON.stringify(s)!==before){history_.push([pane.sym,all]);redo_.length=0;save()}d.close();select(s,pane)};
  d.oncancel=e=>{e.preventDefault();cancel()};
  d.append(el('div',{className:'foot'},el('button',{textContent:'取消',onclick:cancel}),el('button',{textContent:'確定',className:'on',onclick:ok})));
  d.showModal();if(!keep)d.scrollTop=0;
@@ -868,7 +926,7 @@ function favBar(){
  const grip=el('span',{className:'grip',textContent:'⠿',title:'拖曳移動'});
  grip.onpointerdown=e=>{grip.setPointerCapture(e.pointerId);const r=bar.getBoundingClientRect(),dx=e.clientX-r.left,dy=e.clientY-r.top;grip.onpointermove=ev=>place(ev.clientX-dx,ev.clientY-dy);grip.onpointerup=()=>grip.onpointermove=null};
  bar.append(grip,...favs.map(id=>{const b=el('button',{textContent:DEFS[id].name.replace(/\(.*\)|斐波那契(?=.)|形態$/g,'').slice(0,4),title:DEFS[id].name,onclick:()=>pick(id)});b.dataset.tool=id;b.classList.toggle('on',tool===id);return b}));
- const p=store.get('float',null)||[56,innerHeight-60];place(...p);
+ const p=store.get('float',null)||[56,innerHeight-90];place(...p);
 }
 function place(x,y){const bar=$('#fav');x=Math.max(0,Math.min(innerWidth-bar.offsetWidth,x));y=Math.max(0,Math.min(innerHeight-bar.offsetHeight,y));bar.style.left=x+'px';bar.style.top=y+'px';store.set('float',[x,y])}
 {const nav=$('#tools');
@@ -895,7 +953,8 @@ addEventListener('keydown',e=>{
  if(k==='escape'){closeMenus();setTool('');select(null);panes.forEach(p=>p.picking&&p.exitReplay())}
  if(k==='enter')panes.forEach(p=>p.finishPath());
  if(k==='delete'||k==='backspace')removeSel();
- if(mod&&k==='z'){e.preventDefault();undo()}
+ if(mod&&k==='z'){e.preventDefault();e.shiftKey?redo():undo()}
+ if(mod&&k==='y'){e.preventDefault();redo()}
  if(mod&&k==='c'&&sel)clip=copyOf(sel.s);
  if(mod&&k==='v'&&clip)paste(p,clip);
 });
@@ -939,7 +998,7 @@ function openSettings(){
 }
 $('#setBtn').onclick=openSettings;
 const dual=v=>{$('main').classList.toggle('one',!v);$('#dual').classList.toggle('on',v);store.set('dual',v)};
-$('#dual').onclick=()=>{dual($('main').classList.contains('one'));if($('main').classList.contains('one'))active=0};
+$('#dual').onclick=()=>{dual($('main').classList.contains('one'));if($('main').classList.contains('one'))setActive(0)};
 // ───────── 代碼指標 ─────────
 const SAMPLE=`//@version=6
 indicator("我的腳本", overlay=true)
@@ -1053,13 +1112,14 @@ function applyLayout(t){
  store.set('ind',ind);store.set('tpl',templates);store.set('favs',favs);saveScripts();
  $$('[data-ind]').forEach(b=>b.classList.toggle('on',!!ind[b.dataset.ind]));chips();favBar();applyCfg();
 }
+function layoutName(n){store.set('layoutName',n);$('#tplBtn').textContent=n||'版面模板'}
 function openLayouts(){
  const d=$('#dlg');d.oncancel=null;d.textContent='';
  const name=el('input',{type:'text',placeholder:'模板名稱，例如：55688 盤面'});
- const put=n=>{layouts[n]=snapshotLayout();store.set('layouts',layouts);openLayouts()};
+ const put=n=>{layoutName(n);layouts[n]=snapshotLayout();store.set('layouts',layouts);openLayouts()};
  d.append(el('h4',{textContent:'版面模板'}),el('label',{},name,el('button',{textContent:'儲存目前版面',onclick:()=>{const n=name.value.trim();if(n&&(!layouts[n]||confirm('覆蓋同名模板？')))put(n)}})),
   el('p',{textContent:'包含：指標開關與參數、顏色與網格、繪圖工具預設、常用列、圖上的代碼指標。'}));
- for(const n in layouts)d.append(el('label',{},el('span',{textContent:n}),el('span',{},el('button',{textContent:'套用',onclick:()=>{applyLayout(layouts[n]);d.close()}}),el('button',{textContent:'覆蓋',onclick:()=>{if(confirm(`用目前版面覆蓋「${n}」？`))put(n)}}),el('button',{textContent:'刪除',onclick:()=>{if(confirm(`刪除「${n}」？`)){delete layouts[n];store.set('layouts',layouts);openLayouts()}}}))));
+ for(const n in layouts)d.append(el('label',{},el('span',{textContent:n}),el('span',{},el('button',{textContent:'套用',onclick:()=>{layoutName(n);applyLayout(layouts[n]);d.close()}}),el('button',{textContent:'覆蓋',onclick:()=>{if(confirm(`用目前版面覆蓋「${n}」？`))put(n)}}),el('button',{textContent:'刪除',onclick:()=>{if(confirm(`刪除「${n}」？`)){delete layouts[n];store.set('layouts',layouts);openLayouts()}}}))));
  const file=el('input',{type:'file',accept:'.json',hidden:true,onchange:async e=>{try{const j=JSON.parse(await e.target.files[0].text());if(j.app!=='kb')throw 0;
    if(!confirm('匯入會合併模板與腳本，並覆蓋相同商品的畫線，繼續？'))return;
    Object.assign(layouts,j.layouts);Object.assign(indtpl,j.indtpl);saveIT();for(const k in j.fibsets)fibsets[k]={...fibsets[k],...j.fibsets[k]};saveSets();Object.assign(scripts,j.scripts);Object.assign(params,j.params);for(const k in j.drawings)drawings[k]=j.drawings[k].filter(s=>DEFS[s.type]);store.set('layouts',layouts);saveScripts();save();edList();select(null);openLayouts()}catch{alert('不是有效的看盤台備份檔')}}});
@@ -1070,7 +1130,7 @@ function openLayouts(){
 // ───────── 指標範本 ─────────
 let indtpl=store.get('indtpl',{});
 const PER=['p1','p2','p3','p4','e1','e2','bn','bk','rn','mf','ms','mg'];
-const saveIT=()=>store.set('indtpl',indtpl);
+const saveIT=()=>{store.set('indtpl',indtpl);quickBar()};
 const hasIT=n=>Object.prototype.hasOwnProperty.call(indtpl,n);
 const snapIT=()=>clone({ind,per:Object.fromEntries(PER.map(k=>[k,cfg[k]])),onchart,params:Object.fromEntries(Object.keys(onchart).filter(n=>params[n]).map(n=>[n,params[n]]))});
 const descIT=t=>[...$$('[data-ind]').map(b=>b.dataset.ind).filter(k=>t.ind?.[k]).map(k=>MA[k]?'MA'+t.per[['m7','m21','m60','m200'].indexOf(k)<0?'p1':'p'+(['m7','m21','m60','m200'].indexOf(k)+1)]:IND_NAMES[k]),...Object.keys(t.onchart||{})].join(', ')||'（無指標）';
@@ -1115,8 +1175,134 @@ syncMA();
 panes.push(new Pane(0),new Pane(1));
 favBar();
 initEditor();$('#tplBtn').onclick=openLayouts;$('#gridBtn').onclick=()=>{cfg.showGrid=!cfg.showGrid;applyCfg()};$('#gridBtn').classList.toggle('on',cfg.showGrid);
-panes.forEach((p,i)=>p.el.addEventListener('pointerdown',()=>active=i));
+panes.forEach((p,i)=>p.el.addEventListener('pointerdown',()=>setActive(i),true));
 dual(store.get('dual',true));
+// ───────── TradingView 式排版：上排工具列／右側欄／下方區間列 ─────────
+const TFN={'1m':'1分','3m':'3分','5m':'5分','15m':'15分','30m':'30分','1H':'1h','4H':'4h','1Dutc':'D','1Wutc':'W','1Mutc':'月'};
+const pane_=()=>panes[active];
+function setActive(i){active=i;panes.forEach((p,k)=>p.el.classList.toggle('act',k===i));topSync()}
+function topSync(){
+ const p=pane_();if(!p)return;$('#topSym').textContent=p.sym.replace('-SWAP','.P').replace('-','');
+ $$('#topTf button').forEach(b=>b.classList.toggle('on',b.dataset.t===p.tf));
+ $$('#ranges button').forEach(b=>b.classList.toggle('on',b.dataset.r===p.range));
+ $('#rpBtn').classList.toggle('on',!!(p.replay||p.picking));
+}
+function setSymbol(v){const p=pane_();v=v.trim().toUpperCase();if(!v)return;p.sym=v;p.range=null;p.el.querySelector('input.sym').value=v;p.load();topSync()}
+$('#topTf').append(...Object.keys(TF).map(t=>{const b=el('button',{textContent:TFN[t],onclick:()=>{const p=pane_();p.tf=t;p.range=null;p.load();topSync()}});b.dataset.t=t;return b}));
+// 下拉浮層（指標／圖表類型）
+function popup(id,btn){
+ const box=$(id),open=!box.classList.contains('show');$$('.pop').forEach(x=>x.classList.remove('show'));if(!open)return;
+ box.classList.add('show');const r=$(btn).getBoundingClientRect();box.style.left=Math.max(4,Math.min(r.left,innerWidth-box.offsetWidth-4))+'px';box.style.top=r.bottom+4+'px';
+}
+addEventListener('pointerdown',e=>{if(!e.target.closest('.pop,#indBtn,#ctBtn'))$$('.pop').forEach(x=>x.classList.remove('show'))},true);
+addEventListener('keydown',e=>{if(e.key==='Escape')$$('.pop').forEach(x=>x.classList.remove('show'))});
+$('#indBtn').onclick=()=>popup('#indPop','#indBtn');$('#ctBtn').onclick=()=>popup('#ctPop','#ctBtn');
+$('#edBtn').addEventListener('click',()=>$$('.pop').forEach(x=>x.classList.remove('show')));
+const CTYPES={candle:'K 線',hollow:'空心 K 線',bar:'美國線',line:'收盤折線',area:'面積圖'};
+function setCtype(k){ctype=k;store.set('ctype',k);panes.forEach(p=>{p.theme();p.render()});$$('#ctPop button').forEach(b=>b.classList.toggle('on',b.dataset.c===k))}
+for(const[k,n]of Object.entries(CTYPES)){const b=el('button',{textContent:n,onclick:()=>{setCtype(k);$('#ctPop').classList.remove('show')}});b.dataset.c=k;b.classList.toggle('on',k===ctype);$('#ctPop').append(b)}
+// 指標範本快捷圓鈕
+function quickBar(){
+ const q=$('#quick');q.textContent='';
+ Object.keys(indtpl).sort((a,b)=>(indtpl[b].star|0)-(indtpl[a].star|0)).slice(0,6).forEach(n=>q.append(el('button',{className:'circ',textContent:[...n][0],title:'套用指標範本：'+n,onclick:()=>applyIT(n)})));
+}
+// 回放／復原
+$('#rpBtn').onclick=()=>{const p=pane_();p.replay||p.picking?p.exitReplay():p.pickReplay();topSync()};
+$('#undoBtn').onclick=undo;$('#redoBtn').onclick=redo;
+$('#fullBtn').onclick=()=>document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen?.();
+$('#shotBtn').onclick=()=>{
+ const p=pane_(),main=p.chart.takeScreenshot(),k=main.width/p.wrap.clientWidth,subs=[...Object.values(p.subs),...(p.sx||[]).filter(x=>x.sub).map(x=>x.sub)].map(s=>s.chart.takeScreenshot());
+ const head=Math.round(24*k),c=el('canvas',{width:main.width,height:head+main.height+subs.reduce((a,s)=>a+s.height,0)}),g=c.getContext('2d');
+ g.fillStyle=cfg.bg;g.fillRect(0,0,c.width,c.height);g.drawImage(main,0,head);g.drawImage(p.cv,0,head,main.width,main.height);
+ let y=head+main.height;for(const s of subs){g.drawImage(s,0,y);y+=s.height}
+ g.fillStyle=cfg.txt;g.font=13*k+'px system-ui';g.fillText(`${p.sym}　${TFN[p.tf]}　${fmt(Date.now()/1000+28800).replace('T',' ')} (UTC+8)`,8*k,16*k);
+ c.toBlob(b=>{const a=el('a',{href:URL.createObjectURL(b),download:`${p.sym}_${TFN[p.tf]}.png`});a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)});
+};
+// 商品搜尋
+let instruments=null;
+function openSearch(add){
+ const d=$('#dlg');d.oncancel=null;d.textContent='';
+ const q=el('input',{type:'text',placeholder:'輸入代號，例如 DOGE',className:'sq'}),list=el('div',{className:'slist'});
+ const choose=v=>{d.close();add?addWatch(v):setSymbol(v)};
+ const draw=()=>{const k=q.value.trim().toUpperCase().replace(/[^A-Z0-9]/g,'');const all=instruments||[...$$('#syms option')].map(o=>o.value);
+  const hit=all.filter(i=>i.replace(/-/g,'').includes(k)).sort((a,b)=>(b.endsWith('USDT-SWAP')-a.endsWith('USDT-SWAP'))||a.length-b.length).slice(0,40);
+  list.textContent='';list.append(...hit.map(i=>el('button',{type:'button',textContent:i,onclick:()=>choose(i)})))};
+ q.oninput=draw;q.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();const v=q.value.trim().toUpperCase();if(v)choose(v.includes('-')?v:list.firstChild?.textContent||v)}};
+ d.append(el('h4',{textContent:add?'加入自選清單':'搜尋商品（OKX）'}),q,list,el('div',{className:'foot'},el('button',{textContent:'關閉',onclick:()=>d.close()})));
+ if(!d.open)d.showModal();draw();q.focus();
+ if(!instruments)Promise.all(['SWAP','SPOT'].map(t=>fetch(REST.replace('market/','public/')+'instruments?instType='+t).then(r=>r.json()).then(j=>j.data.map(x=>x.instId)))).then(a=>{instruments=a.flat();if(q.isConnected)draw()}).catch(()=>{});
+}
+$('#topSym').onclick=$('#findBtn').onclick=()=>openSearch(false);
+// 右側欄：自選清單／快訊
+let watch=store.get('watch',['BTC-USDT-SWAP','ETH-USDT-SWAP','SOL-USDT-SWAP','XRP-USDT-SWAP','DOGE-USDT-SWAP','BNB-USDT-SWAP']),panel=store.get('panel',''),quotes={},fired=[],unread=0;
+function addWatch(v){if(!watch.includes(v))watch.push(v);store.set('watch',watch);openPanel('watch');pollWatch()}
+$('#plusBtn').onclick=()=>{addWatch(pane_().sym)};
+function badge(){$('#sAlert i').textContent=unread||'';$('#sAlert i').style.display=unread?'':'none'}
+function openPanel(name){
+ panel=name;store.set('panel',name);const box=$('#panel');box.textContent='';box.classList.toggle('show',!!name);
+ $('#sWatch').classList.toggle('on',name==='watch');$('#sAlert').classList.toggle('on',name==='alert');
+ if(name==='watch'){
+  box.append(el('div',{className:'ph'},el('b',{textContent:'自選清單'}),el('button',{textContent:'＋',title:'加入商品',onclick:()=>openSearch(true)}),el('button',{textContent:'✕',title:'關閉',onclick:()=>openPanel('')})));
+  for(const s of watch){const row=el('div',{className:'wr'},el('button',{className:'go',onclick:()=>setSymbol(s)},el('span',{textContent:s.replace('-SWAP','.P').replace('-','')}),el('span',{className:'px'}),el('span',{className:'pc'})),el('button',{className:'rm',textContent:'✕',title:'移出清單',onclick:()=>{watch=watch.filter(x=>x!==s);store.set('watch',watch);openPanel('watch')}}));row.dataset.s=s;box.append(row)}
+  paintWatch();pollWatch();
+ }
+ if(name==='alert'){
+  unread=0;badge();
+  const price=el('input',{type:'number',step:'any',placeholder:'價格'});
+  box.append(el('div',{className:'ph'},el('b',{textContent:'快訊'}),el('button',{textContent:'✕',title:'關閉',onclick:()=>openPanel('')})),
+   el('div',{className:'add'},price,el('button',{textContent:'新增',onclick:()=>{const v=+price.value,p=pane_();if(!(v>0)||!p.data.length)return price.focus();snapshot(p.sym);const s=p.make('hline',{t:p.data.at(-1).time,p:v});s.alert=true;(drawings[p.sym]??=[]).push(s);save();openPanel('alert')}})),
+   el('p',{textContent:'網頁開著時才會通知。畫線可按右鍵「新增快訊」。'}));
+  let n=0;for(const sym in drawings)for(const s of drawings[sym])if(s.alert){n++;box.append(el('div',{className:'wr'},el('button',{className:'go',onclick:()=>setSymbol(sym)},el('span',{textContent:sym.replace('-SWAP','.P').replace('-','')}),el('span',{className:'px',textContent:['hline','hray','cross','pricelabel'].includes(s.type)?s.pts[0].p.toFixed(2).replace(/\.00$/,''):DEFS[s.type].name})),el('button',{className:'rm',textContent:'✕',title:'取消快訊',onclick:()=>{snapshot(sym);s.alert=false;save();openPanel('alert')}})))}
+  if(!n)box.append(el('p',{textContent:'目前沒有快訊'}));
+  if(fired.length)box.append(el('div',{className:'ph'},el('b',{textContent:'已觸發'})),...fired.slice(-15).reverse().map(t=>el('p',{textContent:t})));
+ }
+}
+function paintWatch(){for(const row of $$('#panel .wr[data-s]')){const q=quotes[row.dataset.s];if(!q)continue;row.querySelector('.px').textContent=q.last;const pc=row.querySelector('.pc');pc.textContent=(q.chg>=0?'+':'')+q.chg.toFixed(2)+'%';pc.style.color=q.chg>=0?cfg.up:cfg.dn}}
+async function pollWatch(){if(panel!=='watch')return;await Promise.all(watch.map(async s=>{try{const[t]=await api('ticker?instId='+encodeURIComponent(s));const c=(t.last/t.open24h-1)*100;if(isFinite(c))quotes[s]={last:t.last,chg:c}}catch{}}));paintWatch()}
+setInterval(()=>{if(!document.hidden)pollWatch()},5000);
+$('#sWatch').onclick=()=>openPanel(panel==='watch'?'':'watch');
+$('#sAlert').onclick=$('#alBtn').onclick=()=>openPanel(panel==='alert'?'':'alert');
+$('#sTree').onclick=()=>openTree(pane_());$('#sCode').onclick=()=>$('#edBtn').click();$('#sTpl').onclick=openLayouts;
+$('#sHelp').onclick=()=>{const d=$('#dlg');d.oncancel=null;d.textContent='';d.append(el('h4',{textContent:'操作與快捷鍵'}),...['Shift＋點兩下：量尺','畫線時按住 Shift：水平／垂直／45°','雙擊畫線：設定；右鍵：選單','Ctrl+Z 復原、Ctrl+Y 重做','Ctrl+C / Ctrl+V 複製貼上、Delete 移除','Alt+T 趨勢線、Alt+H 水平線、Alt+F 斐波','Esc 取消目前工具'].map(t=>el('p',{textContent:t})),el('div',{className:'foot'},el('button',{textContent:'關閉',onclick:()=>d.close()})));d.showModal()};
+// 下方區間列
+const DAY=86400,RANGES={'1天':['1m',DAY],'5天':['5m',5*DAY],'1月':['30m',30*DAY],'3月':['1H',91*DAY],'6月':['4H',182*DAY],'YTD':['1Dutc',0],'1年':['1Dutc',365*DAY],'5年':['1Wutc',1826*DAY],'全部':['1Mutc',Infinity]};
+async function reach(p,t){ // 往前補資料直到涵蓋時間 t
+ await p.bf;const gen=p.gen;let n=0;
+ while(gen===p.gen&&p.data.length&&p.data[0].time>t&&n++<80){
+  try{const rows=await api(`history-candles?instId=${encodeURIComponent(p.sym)}&bar=${p.tf}&limit=100&after=${(p.data[0].time-28800)*1000}`);if(!rows.length)break;p.merge(rows.map(parse))}catch{break}
+ }
+ if(gen===p.gen&&n){p.render()}
+ return gen===p.gen;
+}
+const firstAt=(p,t)=>{const i=p.view().findIndex(x=>x.time>=t);return i<0?p.view().length-1:i};
+async function setRange(k){
+ const p=pane_(),[tf,span]=RANGES[k];p.range=k;p.tf=tf;topSync();await p.load();
+ if(p.range!==k||!p.data.length)return;
+ const now=p.data.at(-1).time,start=span===Infinity?0:k==='YTD'?Date.UTC(new Date(now*1000).getUTCFullYear(),0,1)/1000:now-span;
+ if(!await reach(p,start)||p.range!==k)return;
+ const n=p.view().length;p.chart.timeScale().setVisibleLogicalRange({from:firstAt(p,start)-.5,to:n+Math.max(2,n*.01)});
+}
+for(const k in RANGES){const b=el('button',{textContent:k,onclick:()=>setRange(k)});b.dataset.r=k;$('#ranges').append(b)}
+$('#gotoBtn').onclick=()=>{
+ const d=$('#dlg');d.oncancel=null;d.textContent='';const date=el('input',{type:'date'}),msg=el('p',{});
+ d.append(el('h4',{textContent:'跳到日期'}),el('label',{},el('span',{textContent:'日期（台灣時間）'}),date),msg,el('div',{className:'foot'},el('button',{textContent:'取消',onclick:()=>d.close()}),el('button',{textContent:'前往',className:'on',onclick:async()=>{
+  const t=Date.parse(date.value+'T00:00:00Z')/1000,p=pane_();if(!isFinite(t)||!p.data.length)return;msg.textContent='載入中…';
+  if(!await reach(p,t))return;
+  if(p.data[0].time>t+DAY){msg.textContent='這個週期往前最多到 '+fmt(p.data[0].time).slice(0,10)+'，請改用較大的週期';return}
+  const i=firstAt(p,t);p.chart.timeScale().setVisibleLogicalRange({from:i-60,to:i+80});d.close()}})));
+ d.showModal();
+};
+// 倒數與時鐘
+function countdown(tf){
+ const now=Math.floor(Date.now()/1000);let end;
+ if(tf==='1Mutc'){const x=new Date(now*1000);end=Date.UTC(x.getUTCFullYear(),x.getUTCMonth()+1,1)/1000}
+ else if(tf==='1Wutc'){const d=Math.floor(now/DAY);end=(d+7-(d+3)%7)*DAY}
+ else end=(Math.floor(now/TF[tf])+1)*TF[tf];
+ const l=end-now,d=Math.floor(l/DAY),h=Math.floor(l%DAY/3600),z=v=>String(v).padStart(2,'0');
+ return(d?d+'天 ':'')+(h||d?h+':':'')+z(Math.floor(l%3600/60))+':'+z(l%60);
+}
+setInterval(()=>{$('#clock').textContent=new Date(Date.now()+28800000).toISOString().slice(11,19)+' UTC+8';topSync()},500);
+layoutName(store.get('layoutName',''));quickBar();setActive(0);openPanel(panel);badge();
 (function loop(){panes.forEach(p=>p.paint());requestAnimationFrame(loop)})();
-setInterval(()=>panes.forEach(p=>{const s=TF[p.tf],left=s-Math.floor(Date.now()/1000)%s,h=Math.floor(left/3600);p.el.querySelector('.cd').textContent=p.replay?'':`收K ${h?h+':':''}${String(Math.floor(left%3600/60)).padStart(2,'0')}:${String(left%60).padStart(2,'0')}`}),500);
+setInterval(()=>panes.forEach(p=>{p.el.querySelector('.cd').textContent=p.replay?'':'收K '+countdown(p.tf);p.el.querySelector('.bar').dataset.title=p.sym+' · '+TFN[p.tf]}),500);
 </script></body></html>
