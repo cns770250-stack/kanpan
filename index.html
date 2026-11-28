@@ -90,6 +90,11 @@ main:not(.one) .pane.act .bar{box-shadow:inset 0 2px #2962ff}
 .slist{display:flex;flex-direction:column;max-height:46vh;overflow-y:auto;margin-top:8px}.slist button{flex:none;text-align:left;border:0;background:none;padding:7px}.slist button:hover{background:#252b38}.sq{width:100%}
 @media(max-width:800px){#panel{position:fixed;right:42px;top:80px;bottom:34px;z-index:15;background:#0e1116}}
 #toasts{top:auto!important;bottom:44px!important;right:auto!important;left:56px!important}
+.pslot{position:absolute;z-index:5;pointer-events:none;display:flex;flex-direction:column;gap:4px;max-width:70%;max-height:100%;overflow:hidden}
+.pslot[class*=top_]{top:4px}.pslot[class*=bottom_]{bottom:66px}.pslot[class*=middle_]{top:50%;transform:translateY(-50%)}
+.pslot[class*=_left]{left:6px}.pslot[class*=_right]{right:86px}.pslot[class*=_center]{left:50%;transform:translateX(-50%)}.pslot.middle_center{transform:translate(-50%,-50%)}
+.pslot.top_left{top:62px}
+.ptable{border-collapse:collapse;white-space:nowrap;line-height:1.3}.ptable td{padding:1px 6px;text-align:center}
 </style></head><body>
 <header>
 <button id="topSym" title="搜尋商品" aria-label="搜尋商品">…</button><button id="plusBtn" title="加入自選清單" aria-label="加入自選清單" class="icb"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg></button><span class="sp"></span><span id="topTf"></span><span class="sp"></span><button id="ctBtn" title="圖表類型" aria-label="圖表類型" class="icb"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3v4M8 17v4M16 5v3M16 15v4"/><rect x="5.5" y="7" width="5" height="10"/><rect x="13.5" y="8" width="5" height="7"/></svg></button><span class="sp"></span><button id="indBtn" title="指標" aria-label="指標"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17l5-6 4 3 6-8M4 21v-2M9 21v-5M14 21v-4M19 21v-7"/></svg>指標</button><button id="itBtn">指標範本 ▾</button><span id="quick"></span><span class="sp"></span><button id="alBtn" title="快訊" aria-label="快訊"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M4 5l3-2M20 5l-3-2"/></svg>快訊</button><button id="rpBtn" title="回放" aria-label="回放"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 6l-8 6 8 6zM21 6l-8 6 8 6z"/></svg>回放</button><span class="sp"></span><button id="undoBtn" title="復原 (Ctrl+Z)" aria-label="復原 (Ctrl+Z)" class="icb"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5L4 10l5 5M4 10h10a6 6 0 010 10h-3"/></svg></button><button id="redoBtn" title="重做 (Ctrl+Y)" aria-label="重做 (Ctrl+Y)" class="icb"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l5 5-5 5M20 10H10a6 6 0 000 10h3"/></svg></button><span class="sp"></span><button id="dual" title="單窗／雙窗" aria-label="單窗／雙窗" class="icb on"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="1"/><path d="M12 5v14"/></svg></button><button id="tplBtn" title="版面模板">版面模板</button><span class="grow"></span><button id="findBtn" title="搜尋商品" aria-label="搜尋商品" class="icb"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.500L21 21"/></svg></button><button id="setBtn" title="設定" aria-label="設定" class="icb"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l8 4.5v9L12 21l-8-4.500v-9z"/><circle cx="12" cy="12" r="3"/></svg></button><button id="fullBtn" title="全螢幕" aria-label="全螢幕" class="icb"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg></button><button id="shotBtn" title="截圖下載" aria-label="截圖下載" class="icb"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8h4l2-3h6l2 3h4v11H3z"/><circle cx="12" cy="13" r="3.5"/></svg></button>
@@ -329,92 +334,135 @@ function alertPrices(pane,s){
 }
 const canAlert=s=>['hline','hray','cross','pricelabel','fib','trend','ray','extended'].includes(s.type);
 function notify(msg){fired.push(new Date(Date.now()+28800000).toISOString().slice(5,16).replace('T',' ')+'　'+msg);if(panel==='alert')openPanel('alert');else{unread++;badge()}const d=document.createElement('div');d.className='toast';d.textContent='⏰ '+msg+'（點此關閉）';d.onclick=()=>d.remove();$('#toasts').append(d);try{const a=new AudioContext(),o=a.createOscillator();o.connect(a.destination);o.frequency.value=880;o.start();o.stop(a.currentTime+.4)}catch{}}
-// ───────── Pine 常用語法子集：自行解析逐根執行（不使用 eval） ─────────
+// ───────── Pine 直譯器：自行解析、逐根執行（不使用 eval） ─────────
+const has=(o,k)=>Object.prototype.hasOwnProperty.call(o,k);
 function pineCompile(code){
  const lines=[];let buf=null;
- code.replace(/\r|\uFEFF/g,'').split('\n').forEach((raw,n)=>{
+ code.replace(/\r|﻿/g,'').split('\n').forEach((raw,n)=>{
   const toks=[],re=/\s*(?:(\/\/.*)|("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')|(#[0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?)|(\d+\.?\d*(?:e-?\d+)?|\.\d+)|([A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*)|(:=|\+=|-=|\*=|\/=|==|!=|<=|>=|=>|[-+*\/%<>=?:,()\[\]])|(\S))/y;
   let m;while((m=re.exec(raw))){if(m[1])break;if(m[7])throw Error(`第 ${n+1} 行：無法辨識的字元 ${m[7]}`);
-   if(m[2])toks.push({k:'str',v:m[2].slice(1,-1)});else if(m[3])toks.push({k:'str',v:m[3]});else if(m[4])toks.push({k:'num',v:+m[4],f:m[4].includes('.')});else if(m[5])toks.push({k:'id',v:m[5]});else toks.push({k:'op',v:m[6]})}
+   if(m[2])toks.push({k:'str',v:m[2].slice(1,-1).replace(/\\(.)/g,(_,c)=>c==='n'?'\n':c==='t'?'\t':c)});else if(m[3])toks.push({k:'str',v:m[3]});else if(m[4])toks.push({k:'num',v:+m[4],f:m[4].includes('.')});else if(m[5])toks.push({k:'id',v:m[5]});else toks.push({k:'op',v:m[6]})}
   if(!toks.length)return;
   const indent=raw.match(/^[ \t]*/)[0].replace(/\t/g,'    ').length;
   if(buf)buf.toks.push(...toks);else buf={indent,toks,no:n+1};
   const depth=buf.toks.reduce((d,t)=>d+(t.k==='op'?('(['.includes(t.v)?1:')]'.includes(t.v)?-1:0):0),0),last=buf.toks.at(-1);
-  if(depth>0||(last.k==='op'&&!')]'.includes(last.v)&&last.v!=='=>')||['and','or'].includes(last.v))return;
+  if(depth>0||(last.k==='op'&&!')]'.includes(last.v)&&last.v!=='=>')||(last.k==='id'&&['and','or'].includes(last.v)))return;
   lines.push(buf);buf=null;
  });
  if(buf)lines.push(buf);
- let li=0;
- const parseBlock=indent=>{const out=[];while(li<lines.length&&lines[li].indent>=indent){const L=lines[li];if(L.indent>indent)throw Error(`第 ${L.no} 行：縮排不正確`);out.push(parseStmt())}return out};
- const body=ind=>{if(li>=lines.length||lines[li].indent<=ind)throw Error(`第 ${lines[li-1].no} 行：if 底下缺少縮排內容`);return parseBlock(lines[li].indent)};
- function parseStmt(){
-  const L=lines[li++];let t=L.toks,p=0;
-  const err=m=>{throw Error(`第 ${L.no} 行：${m}`)},peek=()=>t[p],is=v=>t[p]&&t[p].k!=='str'&&t[p].v===v,eat=v=>{if(!is(v))err(`缺少 ${v}`);p++};
-  const bin=(next,ops)=>()=>{let a=next();while(t[p]&&t[p].k!=='str'&&ops.includes(t[p].v)){const op=t[p++].v;a={o:'bin',op,a,b:next(),no:L.no}}return a};
-  const primary=()=>{const x=t[p++];if(!x)err('語法不完整');
+ let li=0;const types=new Map();
+ const fail=(L,m)=>{throw Error(`第 ${L.no} 行：${m}`)};
+ const parseBlock=indent=>{const out=[];while(li<lines.length&&lines[li].indent>=indent){const L=lines[li];if(L.indent>indent)fail(L,'縮排不正確');out.push(...parseLine())}return out};
+ const body=L=>{if(li>=lines.length||lines[li].indent<=L.indent)fail(L,'底下缺少縮排內容');return parseBlock(lines[li].indent)};
+ const splitTop=toks=>{const out=[[]];let d=0;for(const t of toks){if(t.k==='op'){if('(['.includes(t.v))d++;if(')]'.includes(t.v))d--;if(t.v===','&&!d){out.push([]);continue}}out.at(-1).push(t)}return out};
+ function parseLine(){
+  const L=lines[li++],t=L.toks,w=t[0].k==='id'?t[0].v:'';
+  if(w==='import'||w==='method'||w==='export')fail(L,`不支援 ${w}`);
+  if(w==='type'&&t.length===2){
+   const fields=[];while(li<lines.length&&lines[li].indent>L.indent){const F=lines[li++],eq=F.toks.findIndex(x=>x.v==='='&&x.k==='op'),name=F.toks[(eq<0?F.toks.length:eq)-1].v;fields.push({name,def:eq<0?null:exprOf(F,F.toks.slice(eq+1))})}
+   types.set(t[1].v,fields);return[];
+  }
+  const arrow=t.findIndex(x=>x.k==='op'&&x.v==='=>');
+  if(arrow>0&&!L.indent&&t[0].k==='id'&&t[1]?.v==='('&&t[arrow-1].v===')'){
+   const params=splitTop(t.slice(2,arrow-1)).filter(g=>g.length);
+   if(params.some(g=>g.some(x=>x.v==='=')))fail(L,'函式參數不支援預設值');
+   const node={o:'func',name:w,params:params.map(g=>g.at(-1).v),no:L.no};
+   node.body=arrow===t.length-1?body(L):[stmt(L,t.slice(arrow+1))];return[node];
+  }
+  if(['if','for','while','switch'].includes(w))return[stmt(L,t)];
+  return splitTop(t).map(part=>stmt(L,part));
+ }
+ function exprOf(L,toks){const s=cursor(L,toks),e=s.expr();s.end();return e}
+ function stmt(L,t){
+  const s=cursor(L,t),w=t[0]?.k==='id'?t[0].v:'';
+  if(w==='if'){s.p=1;const node={o:'if',c:s.expr(),no:L.no};s.end();node.a=body(L);
+   const E=lines[li];
+   if(E&&E.indent===L.indent&&E.toks[0].v==='else'){li++;node.b=E.toks[1]?.v==='if'?[stmt(E,E.toks.slice(1))]:body(E)}
+   return node}
+  if(w==='for'){
+   if(t[1]?.v==='['||t[2]?.v==='in'){const names=t[1].v==='['?t.slice(2,t.findIndex(x=>x.v===']')).filter(x=>x.k==='id').map(x=>x.v):[t[1].v];s.p=t.findIndex(x=>x.v==='in')+1;const arr=s.expr();s.end();return{o:'forin',names,arr,body:body(L),no:L.no}}
+   const name=t[1].v;s.p=2;s.eat('=');const from=s.expr();s.eat('to');const to=s.expr();let by=null;if(s.is('by')){s.p++;by=s.expr()}s.end();return{o:'for',name,from,to,by,body:body(L),no:L.no}}
+  if(w==='while'){s.p=1;const c=s.expr();s.end();return{o:'while',c,body:body(L),no:L.no}}
+  if((w==='break'||w==='continue')&&t.length===1)return{o:w,no:L.no};
+  if(t[0]?.v==='['){const close=t.findIndex(x=>x.v===']');if(t[close+1]?.v==='='&&t[close+1].k==='op'){s.p=close+2;const e=s.expr();s.end();return{o:'destr',names:t.slice(1,close).filter(x=>x.k==='id').map(x=>x.v),e,no:L.no}}}
+  let d=0,at=-1;for(let k=0;k<t.length;k++){const x=t[k];if(x.k!=='op')continue;if('(['.includes(x.v))d++;else if(')]'.includes(x.v))d--;else if(!d&&['=',':=','+=','-=','*=','/='].includes(x.v)){at=k;break}}
+  if(at>0&&t[at-1].k==='id'){
+   const isVar=w==='var'||w==='varip',name=t[at-1].v,op=t[at].v;s.p=at+1;const e=s.expr();s.end();
+   return{o:'set',name,op,isVar,e,no:L.no}}
+  const e=s.expr();s.end();return{o:'expr',e,no:L.no};
+ }
+ function cursor(L,t){
+  const s={p:0};
+  const err=m=>fail(L,m);
+  s.is=v=>t[s.p]&&t[s.p].k!=='str'&&t[s.p].v===v;
+  s.eat=v=>{if(!s.is(v))err(`缺少 ${v}`);s.p++};
+  s.end=()=>{if(s.p<t.length)err(`多出的內容 ${t[s.p].v}`)};
+  const bin=(next,ops)=>()=>{let a=next();while(t[s.p]&&t[s.p].k!=='str'&&ops.includes(t[s.p].v)){const op=t[s.p++].v;a={o:'bin',op,a,b:next(),no:L.no}}return a};
+  const primary=()=>{const x=t[s.p++];if(!x)err('語法不完整');
    if(x.k==='num'||x.k==='str')return{o:'lit',v:x.v,f:x.f};
-   if(x.v==='('){const e=expr();eat(')');return e}
-   if(x.v==='['){const items=[];do{items.push(expr())}while(is(',')&&++p);eat(']');return{o:'tuple',items}}
-   if(x.k==='id'){if(['for','while','import','method','type'].includes(x.v))err(`不支援 ${x.v}`);return{o:'id',name:x.v,no:L.no}}
+   if(x.v==='('){const e=s.expr();s.eat(')');return e}
+   if(x.v==='['){const items=[];while(!s.is(']')){items.push(s.expr());if(!s.is(']'))s.eat(',')}s.p++;return{o:'tuple',items}}
+   if(x.k==='id')return{o:'id',name:x.v,no:L.no};
    err(`不能使用 ${x.v}`)};
   const post=()=>{let a=primary();for(;;){
-    if(is('(')&&a.o==='id'){p++;const args=[],named={};while(!is(')')){if(t[p]?.k==='id'&&t[p+1]?.v==='='&&t[p+1].k==='op'){const k=t[p].v;p+=2;named[k]=expr()}else args.push(expr());if(!is(')'))eat(',')}p++;a={o:'call',name:a.name,args,named,no:L.no}}
-    else if(is('[')){p++;const n=expr();eat(']');a={o:'hist',a,n}}else return a}};
-  const unary=()=>{if(is('-')){p++;return{o:'neg',a:unary()}}if(is('not')){p++;return{o:'not',a:unary()}}if(is('+'))p++;return post()};
-  const mul=bin(unary,['*','/','%']),addx=bin(mul,['+','-']),rel=bin(addx,['<','>','<=','>=']),eq=bin(rel,['==','!=']),and=bin(eq,['and']),or=bin(and,['or']);
-  function expr(){if(is('switch')){p++;const subj=p<t.length?expr():null,cases=[];
-    if(p<t.length||li>=lines.length||lines[li].indent<=L.indent)err('switch 寫法不支援');
+    if(s.is('(')&&a.o==='id'){s.p++;const args=[],named={};while(!s.is(')')){if(t[s.p]?.k==='id'&&t[s.p+1]?.v==='='&&t[s.p+1].k==='op'){const k=t[s.p].v;s.p+=2;named[k]=s.expr()}else args.push(s.expr());if(!s.is(')'))s.eat(',')}s.p++;a={o:'call',name:a.name,args,named,no:L.no}}
+    else if(s.is('[')){s.p++;const n=s.expr();s.eat(']');a={o:'hist',a,n}}else return a}};
+  const unary=()=>{if(s.is('-')){s.p++;return{o:'neg',a:unary()}}if(s.is('not')){s.p++;return{o:'not',a:unary()}}if(s.is('+'))s.p++;return post()};
+  const mul=bin(unary,['*','/','%']),add=bin(mul,['+','-']),rel=bin(add,['<','>','<=','>=']),eq=bin(rel,['==','!=']),and=bin(eq,['and']),or=bin(and,['or']);
+  s.expr=()=>{
+   if(s.is('switch')){s.p++;const subj=s.p<t.length?s.expr():null,cases=[];
+    if(s.p<t.length||li>=lines.length||lines[li].indent<=L.indent)err('switch 寫法不支援');
     const ind=lines[li].indent;
-    while(li<lines.length&&lines[li].indent===ind){const C=lines[li++],a=C.toks.findIndex(x=>x.k==='op'&&x.v==='=>');
-     if(a<0||a===C.toks.length-1)throw Error(`第 ${C.no} 行：switch 每個分支要寫成「條件 => 值」單行`);
-     const sub=toks=>{const save=[t,p];t=toks;p=0;const e=expr();if(p<t.length)err('switch 分支語法不支援');[t,p]=save;return e};
-     cases.push({m:a?sub(C.toks.slice(0,a)):null,e:sub(C.toks.slice(a+1))})}
+    while(li<lines.length&&lines[li].indent===ind){const C=lines[li++],a=C.toks.findIndex(x=>x.k==='op'&&x.v==='=>');if(a<0)fail(C,'switch 分支缺少 =>');
+     cases.push({m:a?exprOf(C,C.toks.slice(0,a)):null,body:a===C.toks.length-1?body(C):[stmt(C,C.toks.slice(a+1))]})}
     return{o:'switch',subj,cases,no:L.no}}
-   const c=or();if(!is('?'))return c;p++;const a=expr();eat(':');return{o:'tern',c,a,b:expr()}}
-  const end=s=>{if(p<t.length)err(`多出的內容 ${t[p].v}`);return s};
-  if(is('if')){p++;const node={o:'if',c:expr(),no:L.no};end();node.a=body(L.indent);
-   if(lines[li]&&lines[li].indent===L.indent&&lines[li].toks[0].v==='else'){const E=lines[li];if(E.toks[1]?.v==='if'){E.toks=E.toks.slice(1);node.b=[parseStmt()]}else{li++;node.b=body(L.indent)}}return node}
-  const arrow=t.findIndex(x=>x.k==='op'&&x.v==='=>');
-  if(arrow>=0){
-   if(L.indent||t[0].k!=='id'||t[1]?.v!=='('||t[arrow-1]?.v!==')')err('函式寫法不支援');
-   const params=[];let seg=[];for(const x of t.slice(2,arrow-1)){if(x.v===','){params.push(seg);seg=[]}else seg.push(x)}if(seg.length)params.push(seg);
-   if(params.some(g=>g.some(x=>x.v==='=')))err('函式參數不支援預設值');
-   const node={o:'func',name:t[0].v,params:params.map(g=>g.at(-1).v),no:L.no};
-   if(arrow===t.length-1)node.body=body(L.indent);else{p=arrow+1;node.body=[end({o:'expr',e:expr(),no:L.no})]}
-   return node}
-  let isVar=false;if(is('var')||is('varip')){isVar=true;p++}
-  if(t[p]?.k==='id'&&['int','float','bool','string','color','series','simple','const'].includes(t[p].v)&&t[p+1]?.k==='id')p++;
-  if(is('[')){const save=p++;const names=[];while(t[p]?.k==='id'){names.push(t[p++].v);if(is(','))p++}if(is(']')&&t[p+1]?.v==='='){p+=2;return end({o:'destr',names,e:expr(),no:L.no})}p=save}
-  if(t[p]?.k==='id'&&['=',':=','+=','-=','*=','/='].includes(t[p+1]?.v)&&t[p+1].k==='op'){const name=t[p].v,op=t[p+1].v;p+=2;return end({o:'set',name,op,isVar,e:expr(),no:L.no})}
-  return end({o:'expr',e:expr(),no:L.no});
+   const c=or();if(!s.is('?'))return c;s.p++;const a=s.expr();s.eat(':');return{o:'tern',c,a,b:s.expr()}};
+  return s;
  }
- return pineExpand(parseBlock(lines[0]?.indent||0));
+ return pineExpand(parseBlock(lines[0]?.indent||0),types);
 }
-function pineExpand(ast){
+// 自訂函式：每個呼叫點展開一份，區域變數與狀態互不干擾
+function pineExpand(ast,types){
  const funcs=new Map();let seq=0;
- const locals=(list,set)=>list.forEach(s=>{if(s.o==='set'&&s.op==='=')set.add(s.name);if(s.o==='destr')s.names.forEach(n=>set.add(n));if(s.o==='if'){locals(s.a,set);locals(s.b||[],set)}});
+ const locals=(n,set)=>{if(Array.isArray(n))return n.forEach(x=>locals(x,set));if(!n||typeof n!=='object')return;
+  if(n.o==='set'&&n.op==='='&&!n.name.includes('.'))set.add(n.name);if(n.o==='destr'||n.o==='forin')n.names.forEach(x=>set.add(x));if(n.o==='for')set.add(n.name);
+  for(const k in n)if(typeof n[k]==='object'&&k!=='names')locals(n[k],set)};
+ const rename=(name,map)=>{const[head,...rest]=name.split('.');return map.has(head)?[map.get(head),...rest].join('.'):name};
  const walk=(n,map,depth)=>{
   if(Array.isArray(n))return n.map(x=>walk(x,map,depth));
   if(!n||typeof n!=='object')return n;
-  const o={};for(const k in n)o[k]=k==='named'?Object.fromEntries(Object.entries(n[k]).map(([a,b])=>[a,walk(b,map,depth)])):typeof n[k]==='object'&&k!=='names'?walk(n[k],map,depth):n[k];
-  if(map){if((o.o==='id'||o.o==='set')&&map.has(o.name))o.name=map.get(o.name);if(o.o==='destr')o.names=o.names.map(x=>map.get(x)||x)}
+  const o={};for(const k in n)o[k]=k==='named'?Object.fromEntries(Object.entries(n[k]).map(([a,b])=>[a,walk(b,map,depth)])):k!=='names'&&typeof n[k]==='object'?walk(n[k],map,depth):n[k];
+  if(map){if(o.o==='id'||o.o==='set'||o.o==='for')o.name=rename(o.name,map);if(o.o==='destr'||o.o==='forin')o.names=o.names.map(x=>map.get(x)||x)}
   const f=o.o==='call'&&funcs.get(o.name);if(!f)return o;
   if(depth>8)throw Error(`第 ${o.no} 行：函式呼叫層數過多`);
   if(o.args.length!==f.params.length||Object.keys(o.named).length)throw Error(`第 ${o.no} 行：${o.name} 的參數數量不符`);
   const names=new Set(f.params);locals(f.body,names);const tag='@'+(++seq),m=new Map([...names].map(x=>[x,x+tag]));
-  const body=walk(f.body,m,depth+1),last=body.pop();
-  const ret=last.o==='expr'?last.e:last.o==='set'?(body.push(last),{o:'id',name:last.name,no:last.no}):null;
-  if(!ret)throw Error(`第 ${o.no} 行：函式 ${o.name} 最後一行必須是回傳值`);
-  return{o:'ucall',pre:f.params.map((x,j)=>({o:'set',name:m.get(x),op:'=',e:o.args[j],no:o.no})),body,ret,no:o.no};
+  return{o:'ucall',pre:f.params.map((x,j)=>({o:'set',name:m.get(x),op:'=',e:o.args[j],no:o.no})),body:walk(f.body,m,depth+1),no:o.no};
  };
  const out=[];
  for(const s of ast){if(s.o==='func')funcs.set(s.name,s);else out.push(walk(s,null,0))}
- return out;
+ out.types=types;return out;
 }
 const PCOL={aqua:'#00bcd4',black:'#363a45',blue:'#2962ff',fuchsia:'#e040fb',gray:'#787b86',green:'#4caf50',lime:'#00e676',maroon:'#880e4f',navy:'#311b92',olive:'#808000',orange:'#ff9800',purple:'#9c27b0',red:'#f23645',silver:'#b2b5be',teal:'#089981',white:'#ffffff',yellow:'#fdd835'};
+const CONSTS=/^(shape|location|size|plot|hline|display|position|extend|line\.style|label\.style|text|xloc|yloc|format|barmerge|alert|font|order|scale)[._]/;
+const PTF={'1m':'1','3m':'3','5m':'5','15m':'15','30m':'30','1H':'60','4H':'240','1Dutc':'D','1Wutc':'W','1Mutc':'M'};
+const OKXTF={'1':'1m','3':'3m','5':'5m','15':'15m','30':'30m','60':'1H','120':'2H','240':'4H','360':'6Hutc','720':'12Hutc','D':'1Dutc','1D':'1Dutc','W':'1Wutc','1W':'1Wutc','M':'1Mutc','1M':'1Mutc'};
+const tfSec=p=>p==='D'||p==='1D'?86400:p==='W'||p==='1W'?604800:p==='M'||p==='1M'?2592000:(+p||15)*60;
+const NF=new Map();
+const fmtNum=(v,f,prec)=>{
+ if(typeof v!=='number')return String(v);if(!Number.isFinite(v))return'NaN';
+ if(f==='format.mintick')return v.toFixed(prec);
+ if(f==='format.volume')return Math.abs(v)>=1e9?(v/1e9).toFixed(2)+'B':Math.abs(v)>=1e6?(v/1e6).toFixed(2)+'M':Math.abs(v)>=1e3?(v/1e3).toFixed(2)+'K':String(+v.toFixed(2));
+ if(typeof f==='string'&&/[#0]/.test(f)){const dec=f.split('.')[1]||'',min=(dec.match(/0/g)||[]).length,max=(dec.match(/[0#]/g)||[]).length;let nf=NF.get(f);if(!nf)NF.set(f,nf=new Intl.NumberFormat('en-US',{minimumFractionDigits:min,maximumFractionDigits:Math.min(20,max),useGrouping:f.includes(',')}));return nf.format(v)}
+ return String(+v.toFixed(10));
+};
 function pineRun(ast,data,info){
- const N=data.length,vars=new Map(),mem=new Map(),out={title:'指標',overlay:false,inputs:new Map(),styles:new Map(),plots:new Map(),hlines:new Map(),shapes:[],fills:new Map(),warn:new Set()};let i=0;
+ let N=data.length,i=0,vars=new Map(),mem=new Map(),outer=null,loops=0;
+ const prec=info.prec??2,tfp=PTF[info.tf]||'15';
+ const out={title:'指標',overlay:false,format:'',inputs:new Map(),styles:new Map(),plots:new Map(),hlines:new Map(),shapes:[],fills:new Map(),objs:{box:new Set(),line:new Set(),label:new Set()},tables:[],warn:new Set(),pending:false};
+ const types=ast.types||new Map();
  const na=v=>typeof v==='number'?Number.isNaN(v):v==null;
+ const truth=v=>!na(v)&&!!v;
  const bi={open:j=>data[j].open,high:j=>data[j].high,low:j=>data[j].low,close:j=>data[j].close,volume:j=>data[j].vol,
   hl2:j=>(data[j].high+data[j].low)/2,hlc3:j=>(data[j].high+data[j].low+data[j].close)/3,ohlc4:j=>(data[j].open+data[j].high+data[j].low+data[j].close)/4,
   time:j=>(data[j].time-28800)*1000,bar_index:j=>j,hour:j=>new Date(data[j].time*1000).getUTCHours(),minute:j=>new Date(data[j].time*1000).getUTCMinutes()};
@@ -422,71 +470,205 @@ function pineRun(ast,data,info){
  const win=(h,n)=>{if(!(n>=1)||i-n+1<0)return null;const a=[];for(let j=i-n+1;j<=i;j++){if(h[j]===undefined||na(h[j]))return null;a.push(h[j])}return a};
  const mean=a=>a.reduce((p,c)=>p+c,0)/a.length;
  const smooth=(s,key,v,n,alpha)=>{const o=s[key]||(s[key]={h:[],r:[]});o.h[i]=v;let prev=NaN;for(let j=i-1;j>=0;j--)if(o.r[j]!==undefined){prev=o.r[j];break}
-  let r;if(na(prev)){if(key.startsWith('~'))r=v;else{const w=win(o.h,n);r=w?mean(w):NaN}}else r=na(v)?prev:alpha*v+(1-alpha)*prev;return o.r[i]=r};
+  let r;if(na(prev)){if(key[0]==='~')r=v;else{const w=win(o.h,n);r=w?mean(w):NaN}}else r=na(v)?prev:alpha*v+(1-alpha)*prev;return o.r[i]=r};
  const stdev=a=>{const m=mean(a);return Math.sqrt(a.reduce((p,c)=>p+(c-m)**2,0)/a.length)};
  const tr=()=>i?Math.max(data[i].high-data[i].low,Math.abs(data[i].high-data[i-1].close),Math.abs(data[i].low-data[i-1].close)):data[i].high-data[i].low;
+ const alpha=(c,t)=>typeof c==='string'&&c[0]==='#'?c.slice(0,7)+Math.round((100-Math.max(0,Math.min(100,t)))*2.55).toString(16).padStart(2,'0'):c;
+ const read=name=>{const h=vars.get(name);if(h)return h[i]===undefined?NaN:h[i];if(outer?.vars.has(name))return outer.vars.get(name)[outer.i]??NaN;return undefined};
+ const field=(obj,k,n)=>{if(na(obj))return NaN;if(typeof obj!=='object'||!has(obj,k))throw Error(`第 ${n.no} 行：沒有欄位 ${k}`);return obj[k]};
+ function ident(n){
+  const k=n.name;let v=read(k);if(v!==undefined)return v;
+  if(k.includes('.')){const[head,...rest]=k.split('.');let o=read(head);if(o!==undefined){for(const f of rest)o=field(o,f,n);return o}}
+  if(has(bi,k))return bi[k](i);
+  if(k==='true')return true;if(k==='false')return false;if(k==='na')return NaN;
+  if(k.startsWith('color.')&&has(PCOL,k.slice(6)))return PCOL[k.slice(6)];
+  if(k==='ta.tr'||k==='tr')return tr();
+  if(has(PCOL,k))return PCOL[k];
+  if(k==='columns'||k==='histogram')return'plot.style_'+k;
+  if(k==='syminfo.ticker'||k==='syminfo.tickerid')return info.sym;
+  if(k==='syminfo.mintick')return 10**-prec;
+  if(k==='timeframe.period')return tfp;
+  if(k==='timeframe.isintraday')return tfSec(tfp)<86400;
+  if(k==='barstate.islast')return i===N-1;
+  if(k==='barstate.isfirst')return i===0;
+  if(k==='barstate.isconfirmed'||k==='barstate.ishistory')return i<N-1;
+  if(k==='barstate.isrealtime')return i===N-1;
+  if(CONSTS.test(k))return k;
+  throw Error(`第 ${n.no} 行：未定義或不支援「${k}」`);
+ }
  function ev(n){
   switch(n.o){
   case'lit':return n.v;
-  case'id':{const k=n.name;if(vars.has(k))return vars.get(k)[i];if(k in bi)return bi[k](i);if(k==='true')return true;if(k==='false')return false;if(k==='na')return NaN;
-   if(k.startsWith('color.')&&PCOL[k.slice(6)])return PCOL[k.slice(6)];if(/^(shape|location|size|plot|hline|display)\./.test(k))return k;if(k==='ta.tr'||k==='tr')return tr();if(PCOL[k])return PCOL[k];if(k==='columns'||k==='histogram')return'plot.style_'+k;if(k==='syminfo.ticker')return info.sym;
-   if(k==='barstate.islast')return i===N-1;if(k==='barstate.isconfirmed')return i<N-1;throw Error(`第 ${n.no} 行：未定義或不支援「${k}」`)}
-  case'hist':{const k=Math.round(ev(n.n));if(n.a.o==='id'){const nm=n.a.name,h=vars.get(nm);const s=state(n);if(h)return i-k>=0?h[i-k]??NaN:NaN;if(nm in bi)return i-k>=0?bi[nm](i-k):NaN}const s=state(n);s.h[i]=ev(n.a);return i-k>=0?s.h[i-k]??NaN:NaN}
+  case'id':return ident(n);
+  case'hist':{const k=Math.round(ev(n.n));if(n.a.o==='id'){const h=vars.get(n.a.name);if(h)return i-k>=0?h[i-k]??NaN:NaN;if(has(bi,n.a.name))return i-k>=0?bi[n.a.name](i-k):NaN}const s=state(n);s.h[i]=ev(n.a);return i-k>=0?s.h[i-k]??NaN:NaN}
   case'neg':return -ev(n.a);
   case'not':return !truth(ev(n.a));
   case'tern':{const c=truth(ev(n.c)),a=ev(n.a),b=ev(n.b);return c?a:b}
-  case'bin':{const a=ev(n.a),b=ev(n.b);switch(n.op){case'+':return a+b;case'-':return a-b;case'*':return a*b;case'/':return b===0?NaN:a/b;case'%':return a%b;case'<':return a<b;case'>':return a>b;case'<=':return a<=b;case'>=':return a>=b;case'==':return a===b;case'!=':return !na(a)&&!na(b)&&a!==b;case'and':return truth(a)&&truth(b);case'or':return truth(a)||truth(b)}}
+  case'bin':{const a=ev(n.a),b=ev(n.b);switch(n.op){case'+':return a+b;case'-':return a-b;case'*':return a*b;case'/':return b===0?NaN:a/b;case'%':return a%b;case'<':return a<b;case'>':return a>b;case'<=':return a<=b;case'>=':return a>=b;case'==':return a===b;case'!=':return !na(a)&&!na(b)&&a!==b;case'and':return truth(a)&&truth(b);case'or':return truth(a)||truth(b)}return NaN}
   case'tuple':return n.items.map(ev);
-  case'switch':{const v=n.subj&&ev(n.subj);for(const c of n.cases)if(!c.m||(n.subj?ev(c.m)===v:truth(ev(c.m))))return ev(c.e);return NaN}
-  case'ucall':run(n.pre);run(n.body);return ev(n.ret);
+  case'switch':{const v=n.subj?ev(n.subj):null;for(const c of n.cases)if(!c.m||(n.subj?ev(c.m)===v:truth(ev(c.m))))return run(c.body);return NaN}
+  case'ucall':run(n.pre);return run(n.body);
   case'call':return call(n);
   }
+  throw Error('無法執行的語法');
  }
- const truth=v=>!na(v)&&!!v;
- const alpha=(c,t)=>typeof c==='string'&&c[0]==='#'?c.slice(0,7)+Math.round((100-Math.max(0,Math.min(100,t)))*2.55).toString(16).padStart(2,'0'):c;
+ // ── 繪圖物件與表格 ──
+ const SIG={box:['left','top','right','bottom','border_color','border_width','border_style','extend','xloc','bgcolor','text'],
+  line:['x1','y1','x2','y2','xloc','extend','color','style','width'],
+  label:['x','y','text','xloc','yloc','color','style','textcolor','size','textalign']};
+ const DEFAULTS={box:{border_color:'#2962ff',border_width:1,border_style:'line.style_solid',extend:'extend.none',bgcolor:'#2962ff22',text:''},
+  line:{color:'#2962ff',style:'line.style_solid',width:1,extend:'extend.none'},
+  label:{text:'',color:'#2962ff',style:'label.style_label_down',textcolor:'#ffffff',size:'size.normal',yloc:'yloc.price'}};
+ const argsOf=(n,names,skip=0)=>{const o={};n.args.slice(skip).forEach((a,k)=>{if(names[k])o[names[k]]=ev(a)});for(const k in n.named)o[k]=ev(n.named[k]);return o};
+ const timeToIndex=t=>{let a=0,b=N-1;while(a<b){const m=a+b+1>>1;(data[m].time-28800)*1000<=t?a=m:b=m-1}return a};
+ function drawing(kind,method,n){
+  const set=out.objs[kind];
+  if(method==='new'){
+   const o={...DEFAULTS[kind],...argsOf(n,SIG[kind]),kind};
+   if(o.xloc==='xloc.bar_time')for(const k of['x','x1','x2','left','right'])if(has(o,k))o[k]=timeToIndex(o[k]);
+   set.add(o);if(set.size>500)set.delete(set.values().next().value);return o}
+  const o=ev(n.args[0]);if(na(o)||typeof o!=='object'||o.kind!==kind)return NaN;
+  const v=n.args.slice(1).map(ev);
+  if(method==='delete'){set.delete(o);return}
+  const get={left:'left',right:'right',top:'top',bottom:'bottom',x1:'x1',x2:'x2',y1:'y1',y2:'y2',x:'x',y:'y',text:'text'};
+  if(method.startsWith('get_')&&has(get,method.slice(4)))return o[get[method.slice(4)]]??NaN;
+  const pairs={set_xy:['x','y'],set_xy1:['x1','y1'],set_xy2:['x2','y2'],set_lefttop:['left','top'],set_rightbottom:['right','bottom']};
+  if(has(pairs,method)){pairs[method].forEach((k,j)=>o[k]=v[j]);return}
+  if(/^set_(left|right|top|bottom|x1|x2|y1|y2|x|y|text|color|textcolor|bgcolor|border_color|border_width|border_style|extend|style|width|size)$/.test(method)){o[method.slice(4)]=v[0];return}
+  throw Error(`第 ${n.no} 行：不支援函式「${kind}.${method}」`);
+ }
+ function table(method,n){
+  if(method==='new'){const o={...argsOf(n,['position','columns','rows','bgcolor','frame_color','frame_width','border_color','border_width']),kind:'table',cells:new Map(),merges:[]};out.tables.push(o);return o}
+  const t=ev(n.args[0]);if(na(t)||t.kind!=='table')return NaN;
+  if(method==='cell'){const o=argsOf(n,['column','row','text','width','height','text_color','text_halign','text_valign','text_size','bgcolor'],1);t.cells.set(o.column+','+o.row,o);return}
+  if(method==='merge_cells'){const[c1,r1,c2,r2]=n.args.slice(1).map(ev);t.merges=t.merges.filter(m=>m[0]!==c1||m[1]!==r1);t.merges.push([c1,r1,c2,r2]);return}
+  if(method==='delete'){out.tables=out.tables.filter(x=>x!==t);return}
+  if(method==='clear'){t.cells.clear();t.merges=[];return}
+  const v=n.args.slice(1).map(ev);
+  if(/^set_(position|bgcolor|frame_color|frame_width|border_color|border_width)$/.test(method)){t[method.slice(4)]=v[0];return}
+  const cell=/^cell_set_(text|text_color|bgcolor|text_size)$/.exec(method);
+  if(cell){const o=t.cells.get(v[0]+','+v[1]);if(o)o[cell[1]]=v[2];return}
+ }
+ function array(method,n){
+  if(method==='from')return n.args.map(ev);
+  if(method.startsWith('new')){const[size=0,init=NaN]=n.args.map(ev);return Array(Math.max(0,Math.min(100000,size||0))).fill(init)}
+  const[a,x,y]=n.args.map(ev);if(!Array.isArray(a))throw Error(`第 ${n.no} 行：array.${method} 需要陣列`);
+  const nums=()=>a.filter(v=>!na(v));
+  switch(method){
+  case'size':return a.length;case'get':return a.at(x)??NaN;case'set':a[x]=y;return;case'push':if(a.length<100000)a.push(x);return;case'unshift':a.unshift(x);return;
+  case'pop':return a.length?a.pop():NaN;case'shift':return a.length?a.shift():NaN;case'clear':a.length=0;return;case'remove':return a.splice(x,1)[0]??NaN;case'insert':a.splice(x,0,y);return;
+  case'max':return nums().length?Math.max(...nums()):NaN;case'min':return nums().length?Math.min(...nums()):NaN;case'sum':return nums().reduce((p,c)=>p+c,0);case'avg':return nums().length?mean(nums()):NaN;
+  case'includes':return a.includes(x);case'indexof':return a.indexOf(x);case'first':return a[0]??NaN;case'last':return a.at(-1)??NaN;case'copy':return a.slice();case'slice':return a.slice(x,y);case'reverse':a.reverse();return;
+  case'sort':a.sort((p,q)=>x==='order.descending'?q-p:p-q);return;
+  }
+  throw Error(`第 ${n.no} 行：不支援函式「array.${method}」`);
+ }
+ function inSession(n){
+  const[,sess,tz]=n.args.map(ev);if(sess===undefined)return bi.time(i);
+  const m=/^(\d{2})(\d{2})-(\d{2})(\d{2})/.exec(sess);if(!m)return NaN;
+  let off=0;const utc=data[i].time-28800;
+  if(tz==='Asia/Taipei'||tz==='Asia/Hong_Kong'||tz==='Asia/Shanghai'||tz==='Asia/Singapore')off=28800;
+  else if(/^(UTC|GMT)[+-]\d+/.test(tz||''))off=parseInt(tz.slice(3))*3600;
+  else if(tz&&tz!=='UTC'&&tz!=='Etc/UTC'){const s=state(n),day=Math.floor(utc/3600);if(s.day!==day){s.day=day;s.fmt??=new Intl.DateTimeFormat('en-GB',{timeZone:tz,hour:'2-digit',minute:'2-digit',hourCycle:'h23'});const[h,mi]=s.fmt.format(new Date(utc*1000)).split(':').map(Number);let d=h*60+mi-Math.floor(utc/60)%1440;if(d>720)d-=1440;if(d<-720)d+=1440;s.off=d*60}off=s.off}
+  const now=Math.floor((utc+off)/60)%1440,a=+m[1]*60+ +m[2],b=+m[3]*60+ +m[4];
+  return(a<b?now>=a&&now<b:now>=a||now<b)?bi.time(i):NaN;
+ }
+ // request.security：在目標週期資料上計算，再對齊回目前K棒（只取已收盤的K，避免偷看未來）
+ function security(n){
+  const s=state(n);
+  if(!s.sec){
+   const sym=ev(n.args[0]),tf=String(ev(n.args[1])||tfp),expr=n.args[2];
+   const h=tf===tfp&&sym===info.sym?data:info.htf?.(sym,tf);
+   if(!h){out.pending=true;s.sec={h:null}}
+   else{
+    const save={data,N,i,vars,mem,outer};outer={vars,i};data=h;N=h.length;vars=new Map();mem=new Map();
+    const values=[];for(i=0;i<N;i++)values.push(ev(expr));
+    ({data,N,i,vars,mem,outer}=save);s.sec={h,values,sec:tfSec(tf),j:-1};
+   }
+  }
+  const c=s.sec,shape=v=>n.args[2].o==='tuple'?n.args[2].items.map((_,k)=>v?v[k]:NaN):v??NaN;
+  if(!c.h)return shape(null);
+  const close=data[i].time+tfSec(tfp),live=i===N-1&&info.live;
+  while(c.j+1<c.h.length&&c.h[c.j+1].time+c.sec<=close)c.j++;
+  let j=c.j;if(live)while(j+1<c.h.length&&c.h[j+1].time<=data[i].time)j++;
+  return shape(j<0?null:c.values[j]);
+ }
  function call(n){
-  let f=n.name;if(f==='study')f='indicator';else if(/^(sma|ema|rma|wma|rsi|atr|stdev|highest|lowest|change|crossover|crossunder|cross|pivothigh|pivotlow|macd)$/.test(f))f='ta.'+f;else if(/^(abs|max|min)$/.test(f))f='math.'+f;
+  let f=n.fn;if(f===undefined){f=n.name;if(f==='study')f='indicator';else if(/^(sma|ema|rma|wma|vwma|rsi|atr|stdev|highest|lowest|change|crossover|crossunder|cross|pivothigh|pivotlow|macd|barssince|cum|valuewhen)$/.test(f))f='ta.'+f;else if(/^(abs|max|min|round|floor|ceil|sqrt|pow|log|exp|sign|avg|sum)$/.test(f))f='math.'+f;else if(f==='security')f='request.security';else if(f==='tostring')f='str.tostring';n.fn=f}
   const arg=(k,name,def)=>n.named[name]?ev(n.named[name]):n.args[k]?ev(n.args[k]):def;
-  if(f==='indicator'){out.title=String(arg(0,'title','指標'));out.overlay=truth(arg(2,'overlay',false));return}
-  if(f==='input'||/^input\.(int|float|bool|string|source|color|timeframe)$/.test(f)){
-   const dn=n.named.defval||n.args[0],def=ev(dn);const st=state(n);
+  const dot=f.indexOf('.'),ns=f.slice(0,dot),method=f.slice(dot+1);
+  if(dot>0&&method==='new'&&types.has(ns)){const o={kind:'udt'};types.get(ns).forEach((fd,k)=>o[fd.name]=has(n.named,fd.name)?ev(n.named[fd.name]):n.args[k]?ev(n.args[k]):fd.def?ev(fd.def):NaN);return o}
+  if(ns==='box'||ns==='line'||ns==='label')return drawing(ns,method,n);
+  if(ns==='table')return table(method,n);
+  if(ns==='array')return array(method,n);
+  if(f==='indicator'){out.title=String(arg(0,'title','指標'));out.overlay=truth(n.named.overlay?ev(n.named.overlay):n.args[2]&&n.name!=='study'?ev(n.args[2]):false);if(n.named.format)out.format=ev(n.named.format);return}
+  if(f==='input'||/^input\.(int|float|bool|string|source|color|timeframe|session|price|time|symbol|text_area)$/.test(f)){
+   const st=state(n);if(st.done)return st.value;
+   const dn=n.named.defval||n.args[0],def=ev(dn);
    if(!st.key){const title=String(arg(1,'title',`參數（第 ${n.no} 行）`)),group=n.named.group?ev(n.named.group)+'｜':'';let k=group+title;for(let c=2;out.inputs.has(k);c++)k=`${group}${title} (${c})`;st.key=k}
    const key=st.key;
    const isSrc=f==='input.source'||(f==='input'&&dn.o==='id'&&['open','high','low','close','hl2','hlc3','ohlc4'].includes(dn.name));
-   const type=isSrc?'source':f==='input'?(typeof def==='boolean'?'bool':typeof def==='number'?(Number.isInteger(def)&&!dn.f?'int':'float'):/^#/.test(def)?'color':'string'):f.slice(6);
-   if(!out.inputs.has(key)){const meta={type,def:isSrc?dn.name:def};if(n.named.options)meta.options=ev(n.named.options);else if(f==='input.string'&&n.args[2]?.o==='tuple')meta.options=ev(n.args[2]);if(type==='int'||type==='float'){meta.min=n.named.minval?ev(n.named.minval):n.args[2]?ev(n.args[2]):undefined;meta.max=n.named.maxval?ev(n.named.maxval):n.args[3]?ev(n.args[3]):undefined}out.inputs.set(key,meta)}
-   const v=info.params?.in?.[key];if(v===undefined)return def;
-   if(isSrc)return v in bi?bi[v](i):def;
-   if(type==='int'||type==='float'){if(typeof v!=='number'||!isFinite(v))return def;const m=out.inputs.get(key);return Math.min(m.max??Infinity,Math.max(m.min??-Infinity,type==='int'?Math.round(v):v))}
-   return typeof v===typeof def?v:def}
+   const type=isSrc?'source':f==='input'?(typeof def==='boolean'?'bool':typeof def==='number'?(Number.isInteger(def)&&!dn.f?'int':'float'):/^#/.test(def)?'color':'string'):f==='input.price'?'float':['int','float','bool','color'].includes(f.slice(6))?f.slice(6):'string';
+   if(!out.inputs.has(key)){const meta={type,def:isSrc?dn.name:def};if(n.named.options)meta.options=ev(n.named.options);else if(f==='input.string'&&n.args[2]?.o==='tuple')meta.options=ev(n.args[2]);if(type==='int'||type==='float'){meta.min=n.named.minval?ev(n.named.minval):n.args[2]&&n.args[2].o!=='tuple'?ev(n.args[2]):undefined;meta.max=n.named.maxval?ev(n.named.maxval):n.args[3]?ev(n.args[3]):undefined}out.inputs.set(key,meta)}
+   const v=info.params?.in?.[key];
+   if(isSrc)return v!==undefined&&has(bi,v)?bi[v](i):def;
+   const keep=x=>(st.done=true,st.value=x);
+   if(v===undefined)return keep(def);
+   if(type==='int'||type==='float'){if(typeof v!=='number'||!isFinite(v))return keep(def);const m=out.inputs.get(key);return keep(Math.min(m.max??Infinity,Math.max(m.min??-Infinity,type==='int'?Math.round(v):v)))}
+   if(type==='color'&&typeof v==='string'&&v.length===7&&typeof def==='string'&&def.length===9)return keep(v+def.slice(7));
+   return keep(typeof v===typeof def?v:def)}
   if(f==='plot'){let p=out.plots.get(n);const v=arg(0,'series');let color=arg(2,'color','#2962ff');if(n.named.transp)color=alpha(color,ev(n.named.transp));
-   if(!p){const title=String(arg(1,'title',`線 ${out.plots.size+1}`)),width=arg(3,'linewidth',1),o=info.params?.st?.[title]||{};out.plots.set(n,p={title,width:o.width??width,style:String(arg(4,'style','')),hidden:!!o.hidden||(!!n.named.transp&&ev(n.named.transp)>=100&&o.hidden===undefined),off:o.hidden,over:o.color,data:[]});out.styles.set(title,{color:o.color??String(color).slice(0,7),width:p.width,hidden:p.hidden})}p.data[i]={v,color:p.over??color};return p}
-  if(f==='hline'){const price=arg(0,'price');const h={price,color:arg(2,'color','#787b86'),title:String(arg(1,'title',''))};out.hlines.set(n,h);return h}
-  if(f==='plotshape'||f==='plotchar'){const v=arg(0,'series');if(truth(v)){const loc=String(n.named.location?ev(n.named.location):f==='plotshape'&&n.args[3]?ev(n.args[3]):'location.abovebar'),st=String(f==='plotshape'?arg(2,'style',''):'');
-     out.shapes.push({i,below:loc.includes('below')||/up/.test(st),shape:/up/.test(st)?'arrowUp':/down/.test(st)?'arrowDown':/square|diamond/.test(st)?'square':'circle',color:arg(4,'color','#2962ff'),text:String(n.named.text?ev(n.named.text):f==='plotchar'?arg(2,'char',''):'')})}return}
-  if(/^(alert|alertcondition|barcolor|bgcolor|plotcandle|plotbar|plotarrow)$/.test(f)){out.warn.add(f);return}
+   const display=n.named.display?ev(n.named.display):'display.all';
+   if(!p){const title=String(arg(1,'title',`線 ${out.plots.size+1}`)),width=arg(3,'linewidth',1),o=info.params?.st?.[title]||{};let style=arg(4,'style','');if(style===6)style='plot.style_circles';else if(style===3)style='plot.style_cross';else if(style===2||style===5)style='plot.style_histogram';
+    out.plots.set(n,p={title,width:o.width??width,style:String(style),hidden:!!o.hidden||display==='display.none'||(!!n.named.transp&&ev(n.named.transp)>=100&&o.hidden===undefined),scaleOnly:display==='display.price_scale',over:o.color,data:[]});out.styles.set(title,{color:o.color??String(color).slice(0,7),width:p.width,hidden:p.hidden})}
+   p.data[i]={v,color:p.over??color};return p}
+  if(f==='hline'){const h={price:arg(0,'price'),color:arg(2,'color','#787b86'),title:String(arg(1,'title',''))};out.hlines.set(n,h);return h}
+  if(f==='plotshape'||f==='plotchar'){const v=arg(0,'series');if(truth(v)){
+     const loc=String(arg(3,'location','location.abovebar')),st=String(f==='plotshape'?arg(2,'style',''):''),absolute=loc.includes('absolute');
+     let color=arg(4,'color','#2962ff');if(n.named.transp&&!absolute)color=alpha(color,ev(n.named.transp));
+     out.shapes.push({i,value:absolute?v:null,style:st,textcolor:arg(7,'textcolor','#787b86'),below:loc.includes('below')||/up/.test(st),shape:/up/.test(st)?'arrowUp':/down/.test(st)?'arrowDown':/square|diamond/.test(st)?'square':'circle',color,text:String(n.named.text?ev(n.named.text):f==='plotchar'?arg(2,'char',''):'')})}return}
   if(f==='fill'){const a=ev(n.args[0]),b=ev(n.args[1]);let c=arg(2,'color',PCOL.blue);if(n.named.transp)c=alpha(c,ev(n.named.transp));else if(typeof c==='string'&&c.length===7)c=alpha(c,90);
+   if(n.named.display&&ev(n.named.display)==='display.none')return;
    let q=out.fills.get(n);if(!q){const title=String(n.named.title?ev(n.named.title):`填色 ${out.fills.size+1}`);out.fills.set(n,q={title,a,b,data:[]})}q.a=a;q.b=b;q.data[i]=c;return}
+  if(/^(alert|alertcondition|barcolor|bgcolor|plotcandle|plotbar|plotarrow)$/.test(f)){out.warn.add(f);return}
+  if(f==='request.security')return security(n);
+  if(f==='time')return inSession(n);
+  if(f==='runtime.error'){throw Error(String(ev(n.args[0])))}
   if(f==='na')return na(ev(n.args[0]));
   if(f==='nz'){const v=ev(n.args[0]);return na(v)?arg(1,'replacement',0):v}
-  if(f==='color.new'){const c=String(ev(n.args[0])).slice(0,7),t=arg(1,'transp',0);return c+Math.round((100-t)*2.55).toString(16).padStart(2,'0')}
+  if(f==='fixnan'){const v=ev(n.args[0]),s=state(n);if(!na(v))s.last=v;return s.last??NaN}
+  if(f==='iff'){const[c,a,b]=n.args.map(ev);return truth(c)?a:b}
+  if(f==='int'){const v=ev(n.args[0]);return Math.trunc(v)}
+  if(f==='float'||f==='bool'||f==='string'||f==='box'||f==='line'||f==='label'||f==='color')return ev(n.args[0]);
+  if(f==='color.new')return alpha(String(ev(n.args[0])).slice(0,7),arg(1,'transp',0));
   if(f==='color.rgb'){const[r,g,b,t=0]=n.args.map(ev);return'#'+[r,g,b,(100-t)*2.55].map(x=>Math.max(0,Math.min(255,Math.round(x))).toString(16).padStart(2,'0')).join('')}
-  if(f.startsWith('math.')){const k=f.slice(5),a=n.args.map(ev);if(k==='avg')return mean(a);if(k==='sum'){const s=state(n);s.h[i]=a[0];const w=win(s.h,a[1]);return w?w.reduce((p,c)=>p+c,0):NaN}if(['abs','max','min','round','floor','ceil','sqrt','pow','log','exp','sign'].includes(k))return k==='round'&&a.length>1?+a[0].toFixed(a[1]):Math[k](...a);}
-  if(f==='str.tostring')return String(ev(n.args[0]));
-  if(f.startsWith('ta.')){
-   const k=f.slice(3),s=state(n),a=n.args.map(ev);
+  if(f==='color.r'||f==='color.g'||f==='color.b'){const c=String(ev(n.args[0])),k={r:1,g:3,b:5}[method];return parseInt(c.slice(k,k+2),16)}
+  if(ns==='math'){const a=n.args.map(ev);if(method==='avg')return mean(a);if(method==='sum'){const s=state(n);s.h[i]=a[0];const w=win(s.h,a[1]);return w?w.reduce((p,c)=>p+c,0):NaN}if(method==='round_to_mintick')return +a[0].toFixed(prec);if(['abs','max','min','round','floor','ceil','sqrt','pow','log','log10','exp','sign'].includes(method))return method==='round'&&a.length>1?+a[0].toFixed(a[1]):Math[method](...a)}
+  if(ns==='str'){const a=n.args.map(ev);switch(method){
+    case'tostring':return Array.isArray(a[0])?'['+a[0].join(', ')+']':fmtNum(a[0],a[1],prec);
+    case'tonumber':{const v=String(a[0]).trim();return v&&isFinite(+v)?+v:NaN}
+    case'format':return String(a[0]).replace(/\{(\d+)(?:,number,([^}]*))?\}/g,(_,k,f)=>fmtNum(a[+k+1],f,prec));
+    case'length':return String(a[0]).length;case'contains':return String(a[0]).includes(a[1]);case'upper':return String(a[0]).toUpperCase();case'lower':return String(a[0]).toLowerCase();
+    case'replace_all':return String(a[0]).split(a[1]).join(a[2]);case'split':return String(a[0]).split(a[1]);case'substring':return String(a[0]).substring(a[1],a[2]);case'startswith':return String(a[0]).startsWith(a[1]);
+  }}
+  if(ns==='ta'){
+   const k=method,s=state(n),a=n.args.map(ev);
    const push=(v,h=s.h)=>(h[i]=v,h);
    switch(k){
    case'sma':{const w=win(push(a[0]),a[1]);return w?mean(w):NaN}
    case'ema':return smooth(s,'~e',a[0],a[1],2/(a[1]+1));
    case'rma':return smooth(s,'e',a[0],a[1],1/a[1]);
    case'wma':{const w=win(push(a[0]),a[1]);return w?w.reduce((p,c,j)=>p+c*(j+1),0)/(w.length*(w.length+1)/2):NaN}
+   case'vwma':{const v=data[i].vol,x=win(push(a[0]*v),a[1]),w=win(push(v,s.h2),a[1]);return x&&w?mean(x)/mean(w):NaN}
    case'stdev':{const w=win(push(a[0]),a[1]);return w?stdev(w):NaN}
    case'highest':case'lowest':{const one=a.length<2,len=one?a[0]:a[1];const w=win(push(one?(k==='highest'?data[i].high:data[i].low):a[0]),len);return w?Math[k==='highest'?'max':'min'](...w):NaN}
    case'change':{const h=push(a[0]),m=a[1]??1;return i>=m?h[i]-h[i-m]:NaN}
+   case'cum':{if(!na(a[0]))s.sum=(s.sum||0)+a[0];return s.sum||0}
+   case'barssince':{if(truth(a[0]))s.at=i;return s.at===undefined?NaN:i-s.at}
+   case'valuewhen':{s.list??=[];if(truth(a[0]))s.list.push(a[1]);return s.list.at(-1-a[2])??NaN}
    case'rsi':{const h=push(a[0]),c=i?h[i]-h[i-1]:NaN,u=smooth(s,'u',na(c)?NaN:Math.max(c,0),a[1],1/a[1]),d=smooth(s,'d',na(c)?NaN:Math.max(-c,0),a[1],1/a[1]);return na(u)?NaN:d===0?100:100-100/(1+u/d)}
    case'atr':return smooth(s,'e',tr(),a[0],1/a[0]);
-   case'cross':case'crossover':case'crossunder':{const x=push(a[0]),y=push(a[1],s.h2);if(!i)return false;if(k==='cross')return(x[i]>y[i]&&x[i-1]<=y[i-1])||(x[i]<y[i]&&x[i-1]>=y[i-1]);return k==='crossover'?x[i]>y[i]&&x[i-1]<=y[i-1]:x[i]<y[i]&&x[i-1]>=y[i-1]}
+   case'cross':case'crossover':case'crossunder':{const x=push(a[0]),y=push(a[1],s.h2);if(!i)return false;const up=x[i]>y[i]&&x[i-1]<=y[i-1],dn=x[i]<y[i]&&x[i-1]>=y[i-1];return k==='cross'?up||dn:k==='crossover'?up:dn}
    case'pivothigh':case'pivotlow':{const hi=k==='pivothigh',two=a.length<3,src=two?(hi?data[i].high:data[i].low):a[0],[l,r]=two?a:a.slice(1),w=win(push(src),l+r+1);if(!w)return NaN;const c=w[l];return w.every((v,j)=>j===l||(hi?(j<l?v<=c:v<c):(j<l?v>=c:v>c)))?c:NaN}
    case'macd':{const[src,fa,sl,sg]=a,m=smooth(s,'~f',src,fa,2/(fa+1))-smooth(s,'~s',src,sl,2/(sl+1)),si=smooth(s,'~g',m,sg,2/(sg+1));return[m,si,m-si]}
    case'bb':{const w=win(push(a[0]),a[1]);if(!w)return[NaN,NaN,NaN];const m=mean(w),d=stdev(w)*a[2];return[m,m+d,m-d]}
@@ -494,18 +676,36 @@ function pineRun(ast,data,info){
   }
   throw Error(`第 ${n.no} 行：不支援函式「${f}」`);
  }
- const assign=(name,v)=>{let h=vars.get(name);if(!h)vars.set(name,h=[]);h[i]=v};
- const run=list=>{for(const s of list){
-  if(s.o==='set'){
-   if(s.isVar){if(!mem.has(s)){mem.set(s,s.name);assign(s.name,ev(s.e))}continue}
-   if(s.op===':='||s.op.length===2){if(!vars.has(s.name))throw Error(`第 ${s.no} 行：${s.name} 尚未宣告`);const v=ev(s.e),c=vars.get(s.name)[i];assign(s.name,s.op===':='?v:s.op==='+='?c+v:s.op==='-='?c-v:s.op==='*='?c*v:c/v)}else assign(s.name,ev(s.e))}
-  else if(s.o==='destr'){const v=ev(s.e);s.names.forEach((nm,j)=>assign(nm,v[j]))}
-  else if(s.o==='if')run(truth(ev(s.c))?s.a:s.b||[]);
-  else ev(s.e);
- }};
- const persistent=new Set(),scan=n=>{if(!n||typeof n!=='object')return;if(n.o==='set'&&n.isVar)persistent.add(n.name);Object.values(n).forEach(scan)};scan(ast);
+ const assign=(name,v)=>{let h=vars.get(name);if(!h)vars.set(name,h=new Array(N).fill(undefined));h[i]=v};
+ const BREAK={},CONT={};
+ const tick=n=>{if(++loops>20000)throw Error(`第 ${n.no} 行：迴圈次數過多`)};
+ const loopBody=body=>{try{run(body)}catch(e){if(e===BREAK)return false;if(e!==CONT)throw e}return true};
+ // 回傳最後一行的值（供函式、switch 使用）
+ function run(list){let last=NaN;for(const s of list){
+  switch(s.o){
+  case'set':{
+   if(s.isVar){if(!mem.has(s)){mem.set(s,true);assign(s.name,ev(s.e))}last=read(s.name);break}
+   if(s.op==='='){const v=ev(s.e);assign(s.name,v);last=v;break}
+   let v=ev(s.e);const parts=s.name.split('.'),isField=parts.length>1&&vars.has(parts[0]);
+   if(!isField&&!vars.has(s.name))throw Error(`第 ${s.no} 行：${s.name} 尚未宣告`);
+   let obj=null,key=parts.at(-1);
+   if(isField){obj=read(parts[0]);for(const f of parts.slice(1,-1))obj=field(obj,f,s);field(obj,key,s)}
+   if(s.op!==':='){const c=obj?obj[key]:read(s.name);v=s.op==='+='?c+v:s.op==='-='?c-v:s.op==='*='?c*v:c/v}
+   if(obj)obj[key]=v;else assign(s.name,v);last=v;break}
+  case'expr':last=ev(s.e);break;
+  case'destr':{const v=ev(s.e);s.names.forEach((nm,j)=>assign(nm,v?.[j]??NaN));break}
+  case'if':last=run(truth(ev(s.c))?s.a:s.b||[]);break;
+  case'for':{const from=ev(s.from),to=ev(s.to);if(na(from)||na(to))break;const dir=to>=from?1:-1,step=Math.abs(s.by?ev(s.by):1)||1;
+   for(let k=from;dir>0?k<=to:k>=to;k+=dir*step){tick(s);assign(s.name,k);if(!loopBody(s.body))break}break}
+  case'forin':{const a=ev(s.arr);if(Array.isArray(a))for(let k=0;k<a.length;k++){tick(s);if(s.names.length>1){assign(s.names[0],k);assign(s.names[1],a[k])}else assign(s.names[0],a[k]);if(!loopBody(s.body))break}break}
+  case'while':while(truth(ev(s.c))){tick(s);if(!loopBody(s.body))break}break;
+  case'break':throw BREAK;
+  case'continue':throw CONT;
+  }
+ }return last}
+ const persistent=new Set(),scan=n=>{if(!n||typeof n!=='object')return;if(n.o==='set'&&n.isVar)persistent.add(n.name);Object.values(n).forEach(scan)};ast.forEach(scan);
  const t0=Date.now();
- for(i=0;i<N;i++){for(const k of persistent){const h=vars.get(k);if(h&&i)h[i]=h[i-1]}run(ast);if(Date.now()-t0>3000)throw Error('執行超過 3 秒，已停止')}
+ for(i=0;i<N;i++){loops=0;for(const k of persistent){const h=vars.get(k);if(h&&i&&h[i-1]!==undefined)h[i]=h[i-1]}run(ast);if(!(i&31)&&Date.now()-t0>8000)throw Error('執行超過 8 秒，已停止')}
  return out;
 }
 class Pane{
@@ -590,7 +790,7 @@ class Pane{
   this.poll=setInterval(()=>{if(Date.now()-(this.live||0)>8000)this.refresh(gen)},5000);
  }
  async refresh(gen){try{const rows=await api(`candles?instId=${encodeURIComponent(this.sym)}&bar=${this.tf}&limit=100`);if(gen===this.gen)this.update(rows.map(parse))}catch{}}
- update(list){this.pending=(this.pending||[]).concat(list);if(this.raf)return;this.raf=setTimeout(()=>{this.raf=0;if(this.pending){this.merge(this.pending);this.pending=null;this.render();this.alerts()}},250)}
+ update(list){this.pending=(this.pending||[]).concat(list);if(this.raf)return;this.raf=setTimeout(()=>{this.raf=0;if(this.pending){this.merge(this.pending);this.pending=null;this.live_=true;this.render();this.live_=false;this.alerts()}},250)}
  stopWS(){clearInterval(this.poll);clearInterval(this.ping);clearTimeout(this.retry);if(this.ws){this.ws.onclose=null;this.ws.close();this.ws=null}this.live=0}
  view(){if(!this.replay)return this.data;let n=this.data.length;while(n&&this.data[n-1].time>this.replay)n--;return this.data.slice(0,n)}
  theme(){
@@ -1040,31 +1240,118 @@ function fillPrimitive(chart,series,d,q){
  const view={zOrder:()=>'bottom',renderer:()=>({draw})};
  return{paneViews:()=>[view]};
 }
+// ── 多週期資料（request.security 用） ──
+const htfCache=new Map();
+function htfData(sym,tf){
+ const bar=has(OKXTF,tf)?OKXTF[tf]:null;if(!bar)return null;
+ const key=sym+'|'+bar;let c=htfCache.get(key);if(!c)htfCache.set(key,c={data:null,at:0,busy:false});
+ if(!c.busy&&Date.now()-c.at>(c.data?60000:5000)){
+  c.busy=true;
+  api(`candles?instId=${encodeURIComponent(sym)}&bar=${bar}&limit=300`).then(rows=>{const first=!c.data;c.data=rows.map(parse).sort((a,b)=>a.time-b.time);if(first)panes.forEach(p=>{if(p.sym===sym){p.live_=false;p.render()}})}).catch(()=>{}).finally(()=>{c.busy=false;c.at=Date.now()});
+ }
+ return c.data;
+}
+const infoOf=(pane,name)=>({sym:pane.sym,tf:pane.tf,prec:pane.prec,live:!pane.replay,params:params[name],htf:(s,tf)=>htfData(s,tf)});
+// ── box / line / label / 絕對位置訊號 ──
+function drawPrimitive(chart,series,d,r){
+ const ts=()=>chart.timeScale();
+ const X=i=>ts().logicalToCoordinate(Math.round(i)),Y=p=>Number.isFinite(p)?series.priceToCoordinate(p):null;
+ const dash=s=>String(s).includes('dashed')?[6,4]:String(s).includes('dotted')?[2,3]:[];
+ const sizes={'size.tiny':9,'size.small':10,'size.normal':12,'size.large':15,'size.huge':20};
+ const bubble=(g,x,y,str,style,bg,fg,size)=>{
+  const lines=String(str).split('\n');g.font=size+'px system-ui';
+  const w=Math.max(...lines.map(l=>g.measureText(l).width))+10,h=lines.length*(size+2)+6;
+  let bx=x-w/2,by=y-h/2;
+  if(/label_down|labeldown/.test(style))by=y-h-5;else if(/label_up|labelup/.test(style))by=y+5;else if(/label_left/.test(style))bx=x+5;else if(/label_right/.test(style))bx=x-w-5;
+  if(x<=maxX+60&&bx+w>maxX-2)bx=maxX-w-2;
+  if(safeColor(bg)&&!/style_none/.test(style)){g.fillStyle=bg;g.fillRect(bx,by,w,h);
+   if(/down/.test(style)){g.beginPath();g.moveTo(x-4,by+h);g.lineTo(x,y);g.lineTo(x+4,by+h);g.fill()}else if(/up/.test(style)){g.beginPath();g.moveTo(x-4,by);g.lineTo(x,y);g.lineTo(x+4,by);g.fill()}}
+  g.fillStyle=safeColor(fg)||cfg.txt;g.textAlign='center';lines.forEach((l,k)=>g.fillText(l,bx+w/2,by+size+2+k*(size+2)));g.textAlign='left';
+ };
+ let maxX=1e9;
+ const back=target=>target.useMediaCoordinateSpace(({context:g,mediaSize:m})=>{
+  for(const o of r.objs.box){let x1=X(o.left),x2=X(o.right);const y1=Y(o.top),y2=Y(o.bottom);if(x1==null||x2==null||y1==null||y2==null)continue;
+   if(/right|both/.test(o.extend))x2=m.width;if(/left|both/.test(o.extend))x1=0;
+   if(safeColor(o.bgcolor)){g.fillStyle=o.bgcolor;g.fillRect(x1,y1,x2-x1,y2-y1)}
+   if(safeColor(o.border_color)&&o.border_width>0){g.strokeStyle=o.border_color;g.lineWidth=o.border_width;g.setLineDash(dash(o.border_style));g.strokeRect(x1,y1,x2-x1,y2-y1)}
+   if(o.text){g.font='11px system-ui';g.fillStyle=safeColor(o.text_color)||cfg.txt;g.textAlign='center';g.fillText(String(o.text),(x1+x2)/2,(y1+y2)/2+4);g.textAlign='left'}}
+  g.setLineDash([]);
+ });
+ const front=target=>target.useMediaCoordinateSpace(({context:g,mediaSize:m})=>{
+  maxX=m.width;
+  for(const o of r.objs.line){let x1=X(o.x1),x2=X(o.x2),y1=Y(o.y1),y2=Y(o.y2);if(x1==null||x2==null||y1==null||y2==null||!safeColor(o.color))continue;
+   const ext=String(o.extend),left=/left|both/.test(ext),right=/right|both/.test(ext);
+   if((left||right)&&x1!==x2){if(x1>x2){[x1,x2]=[x2,x1];[y1,y2]=[y2,y1]}const k=(y2-y1)/(x2-x1),a=y1,b=x1;if(left){x1=0;y1=a+k*(0-b)}if(right){x2=m.width;y2=a+k*(m.width-b)}}
+   g.strokeStyle=o.color;g.lineWidth=o.width;g.setLineDash(dash(o.style));g.beginPath();g.moveTo(x1,y1);g.lineTo(x2,y2);g.stroke()}
+  g.setLineDash([]);
+  for(const o of r.objs.label){const x=X(o.x);let y=Y(o.y),style=String(o.style);
+   if(o.yloc==='yloc.abovebar'||o.yloc==='yloc.belowbar'){const b=d[o.x];if(!b)continue;y=Y(o.yloc==='yloc.abovebar'?b.high:b.low)}
+   if(x==null||y==null||x<-300||x>m.width+300)continue;
+   bubble(g,x,y,o.text,style,o.color,o.textcolor,sizes[o.size]||12)}
+  for(const s of r.shapes){if(s.value==null)continue;const x=X(s.i),y=Y(s.value);if(x==null||y==null||x<-100||x>m.width+100||!safeColor(s.color))continue;
+   if(/label/.test(s.style)&&s.text)bubble(g,x,y,s.text,s.style,s.color,s.textcolor,10);
+   else{g.fillStyle=s.color;g.beginPath();g.arc(x,y,3,0,7);g.fill();if(s.text)bubble(g,x,y+(s.below?4:-4),s.text,s.below?'label_up':'label_down',null,s.color,10)}}
+ });
+ const views=[{zOrder:()=>'bottom',renderer:()=>({draw:back})},{zOrder:()=>'top',renderer:()=>({draw:front})}];
+ return{paneViews:()=>views};
+}
+// ── 指標面板（table） ──
+function drawTables(host,tables){
+ const FONT={'size.tiny':9,'size.small':10,'size.normal':11,'size.large':14,'size.huge':18};
+ for(const t of tables){
+  if(!t.cells.size)continue;
+  const pos=String(t.position||'position.top_right').replace('position.','');
+  let slot=host.querySelector(`.pslot.${CSS.escape(pos)}`);if(!slot){slot=el('div',{className:'pslot '+pos});host.append(slot)}
+  const cells=[...t.cells.values()],rows=[...new Set(cells.map(c=>c.row))].sort((a,b)=>a-b),cols=[...new Set(cells.map(c=>c.column))].sort((a,b)=>a-b);
+  const table=el('table',{className:'ptable'});
+  if(safeColor(t.bgcolor))table.style.background=t.bgcolor;
+  const border=safeColor(t.border_color)&&t.border_width>0?`${Math.min(5,t.border_width)}px solid ${t.border_color}`:'0';
+  for(const row of rows){const tr_=el('tr');
+   for(const col of cols){
+    if(t.merges.some(([c1,r1,c2,r2])=>col>=c1&&col<=c2&&row>=r1&&row<=r2&&(col!==c1||row!==r1)))continue;
+    const c=t.cells.get(col+','+row)||{},m=t.merges.find(x=>x[0]===col&&x[1]===row),td=el('td',{textContent:c.text??''});
+    if(m){td.colSpan=cols.filter(x=>x>=m[0]&&x<=m[2]).length;td.rowSpan=rows.filter(x=>x>=m[1]&&x<=m[3]).length}
+    td.style.border=border;td.style.color=safeColor(c.text_color)||cfg.txt;if(safeColor(c.bgcolor))td.style.background=c.bgcolor;td.style.fontSize=(FONT[c.text_size]||11)+'px';tr_.append(td)}
+   table.append(tr_)}
+  slot.append(table);
+ }
+}
 function runScripts(pane,d){
  const L=LightweightCharts;
+ // 即時跳價時，依上次耗時降低重算頻率，避免大型指標拖慢畫面
+ if(pane.live_&&pane.sxLen===d.length&&Date.now()-pane.sxAt<Math.min(15000,(pane.sxCost||0)*8))return;
+ const began=Date.now();
+ pane.wrap.querySelectorAll('.pslot').forEach(n=>n.remove());
  (pane.sx||[]).forEach(x=>{if(!x.sub)x.series.forEach(s=>pane.chart.removeSeries(s));x.lines.forEach(([s,l])=>s.removePriceLine(l));(x.prims||[]).forEach(([s,q])=>s.detachPrimitive(q));if(x.sub){x.sub.chart.remove();x.sub.el.remove()}});
- pane.sx=[];const markers=[],errors=[];
+ pane.sx=[];const markers=[],errors=[],tables=[];
  if(d.length)for(const[name,code]of Object.entries(hideInd?{}:onchart)){
   try{
-   const r=pineRun(compile(code),d,{sym:pane.sym,params:params[name]}),x={series:[],lines:[],prims:[],sub:null};pane.sx.push(x);
+   const r=pineRun(compile(code),d,infoOf(pane,name)),x={series:[],lines:[],prims:[],sub:null};pane.sx.push(x);
    let chart=pane.chart;
    if(!r.overlay){const el=document.createElement('div');el.className='sub';el.innerHTML='<div></div><span></span>';el.querySelector('span').textContent=r.title;pane.el.querySelector('.subs').append(el);
     chart=L.createChart(el.firstChild,{autoSize:true,layout:{background:{color:cfg.bg},textColor:cfg.txt},grid:{vertLines:{color:cfg.grid,visible:cfg.showGrid},horzLines:{color:cfg.grid,visible:cfg.showGrid}},timeScale:{visible:false,rightOffset:8},rightPriceScale:{minimumWidth:80},handleScroll:false,handleScale:false});x.sub={chart,el}}
    const o={priceLineVisible:false,lastValueVisible:false,crosshairMarkerVisible:false};
    let first=null;
-   for(const p of r.plots.values()){if(p.hidden)continue;const hist=/histogram|columns/.test(p.style),dots=/circles|cross/.test(p.style);
-    const s=hist?chart.addHistogramSeries(o):chart.addLineSeries({...o,lineWidth:Math.max(1,Math.min(4,p.width|0)),lineVisible:!dots,pointMarkersVisible:dots});
+   const format=r.format==='format.volume'?{priceFormat:{type:'volume'}}:{};
+   for(const p of r.plots.values()){if(p.hidden)continue;
+    if(p.scaleOnly){const q=p.data[d.length-1];if(q&&Number.isFinite(q.v)&&r.overlay)x.lines.push([pane.candle,pane.candle.createPriceLine({price:q.v,color:safeColor(q.color)||'#787b86',lineVisible:false,axisLabelVisible:true})]);continue}const hist=/histogram|columns/.test(p.style),dots=/circles|cross/.test(p.style);
+    const s=hist?chart.addHistogramSeries({...o,...format}):chart.addLineSeries({...o,...format,lineWidth:Math.max(1,Math.min(4,p.width|0)),lineVisible:!dots,pointMarkersVisible:dots});
     s.setData(d.map((b,i)=>{const q=p.data[i];return q&&typeof q.v==='number'&&isFinite(q.v)?{time:b.time,value:q.v,color:safeColor(q.color)||'#00000000'}:{time:b.time}}));x.series.push(s);first??=s}
    if(!r.overlay&&!first){first=chart.addLineSeries(o);first.setData(d.map(b=>({time:b.time})));x.series.push(first)}
    const target=r.overlay?pane.candle:first;
    if(target)for(const q of r.fills.values()){if(params[name]?.st?.[q.title]?.hidden)continue;const pr=fillPrimitive(chart,target,d,q);target.attachPrimitive(pr);x.prims.push([target,pr])}
    for(const h of r.hlines.values())if(isFinite(h.price))x.lines.push([target,target.createPriceLine({price:h.price,color:safeColor(h.color)||'#787b86',lineWidth:1,lineStyle:2,title:h.title})]);
-   markers.push(...r.shapes.map(m=>({time:d[m.i].time,position:m.below?'belowBar':'aboveBar',shape:m.shape,color:safeColor(m.color)||'#2962ff',text:m.text})));
+   if(target){const pr=drawPrimitive(chart,target,d,r);target.attachPrimitive(pr);x.prims.push([target,pr])}
+   tables.push(...r.tables);
+   markers.push(...r.shapes.filter(m=>m.value==null&&safeColor(m.color)!==undefined).map(m=>({time:d[m.i].time,position:m.below?'belowBar':'aboveBar',shape:m.shape,color:safeColor(m.color)||'#2962ff',text:m.text})));
    if(x.sub){const range=pane.chart.timeScale().getVisibleLogicalRange();if(range)chart.timeScale().setVisibleLogicalRange(range)}
-   if(r.warn.size)errors.push(`${name}：已略過 ${[...r.warn].join('、')}`);
+   if(r.pending)errors.push(`${name}：多週期資料載入中`);
+   if(r.warn.size)errors.push(`${name}：已略過 ${[...r.warn].join('、')}（不會發出通知）`);
   }catch(e){errors.push(`${name}：${e.message}`)}
  }
  pane.candle.setMarkers(markers.sort((a,b)=>a.time-b.time));
+ drawTables(pane.wrap,tables);
+ pane.sxLen=d.length;pane.sxAt=Date.now();pane.sxCost=pane.sxAt-began;
  pane.scriptMsg=errors.join('；');
  const em=panes.map(p=>p.scriptMsg).find(Boolean);if(em&&$('#ed').classList.contains('show'))$('#edMsg').textContent=em;
 }
@@ -1073,7 +1360,7 @@ const rerender=()=>panes.forEach(p=>p.render());
 function chips(){const box=$('#chips');box.textContent='';for(const n in onchart)box.append(el('span',{className:'chip'},el('button',{textContent:'⚙ '+n,title:'參數設定',onclick:()=>openParams(n)}),el('button',{textContent:'✕',title:'從圖表移除',onclick:()=>{delete onchart[n];saveScripts();chips();rerender()}})))}
 function openParams(name){
  const d=$('#dlg');d.oncancel=null;d.textContent='';
- let r;try{r=pineRun(compile(onchart[name]),panes[0].view().slice(-300),{sym:panes[0].sym,params:params[name]})}catch(e){r=null;d.append(el('p',{textContent:e.message}))}
+ let r;try{r=pineRun(compile(onchart[name]),pane_().view().slice(-300),infoOf(pane_(),name))}catch(e){r=null;d.append(el('p',{textContent:e.message}))}
  const mine=()=>{const p=params[name]??={};p.in??={};p.st??={};return p};
  const apply=()=>{saveScripts();rerender()};
  const row=(label,node)=>d.append(el('label',{},el('span',{textContent:label}),node));
@@ -1103,7 +1390,7 @@ function initEditor(){
  const keep=()=>store.set('draft',{name:name.value,code:code.value});name.oninput=code.oninput=keep;
  const title=()=>name.value.trim()||'未命名腳本';
  $('#edBtn').onclick=()=>$('#ed').classList.toggle('show');$('#edClose').onclick=()=>$('#ed').classList.remove('show');
- $('#edAdd').onclick=()=>{try{pineRun(compile(code.value),panes[0].view().slice(-300),{sym:panes[0].sym})}catch(e){msg.textContent=e.message;return}onchart[title()]=code.value;hideInd=false;$('[data-act=hide]').classList.toggle('on',hidden);saveScripts();chips();msg.textContent='';rerender();if(!msg.textContent)msg.textContent='已新增到圖表'};
+ $('#edAdd').onclick=()=>{try{pineRun(compile(code.value),pane_().view().slice(-300),infoOf(pane_(),title()))}catch(e){msg.textContent=e.message;return}onchart[title()]=code.value;hideInd=false;$('[data-act=hide]').classList.toggle('on',hidden);saveScripts();chips();msg.textContent='';rerender();if(!msg.textContent)msg.textContent='已新增到圖表'};
  $('#edSave').onclick=()=>{scripts[title()]=code.value;if(title() in onchart){onchart[title()]=code.value;rerender()}saveScripts();edList(title());msg.textContent='已儲存：'+title()};
  $('#edNew').onclick=()=>{name.value='未命名腳本';code.value='//@version=6\nindicator("我的腳本")\nplot(close)';edList();keep()};
  $('#edDel').onclick=()=>{const n=$('#edSel').value;if(n&&confirm(`刪除腳本「${n}」？`)){delete scripts[n];saveScripts();edList()}};
