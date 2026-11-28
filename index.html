@@ -805,8 +805,8 @@ class Pane{
   const none='rgba(0,0,0,0)',plain=ctype==='candle',hollow=ctype==='hollow',other=!plain&&!hollow;
   this.candle.applyOptions({upColor:plain?cfg.up:none,downColor:other?none:cfg.dn,borderVisible:hollow,borderUpColor:cfg.up,borderDownColor:cfg.dn,wickVisible:!other,lastValueVisible:!other,priceLineVisible:!other});
   if(this.alt){this.chart.removeSeries(this.alt);this.alt=null}
-  if(other){const o=ctype==='bar'?{upColor:cfg.up,downColor:cfg.dn,thinBars:false}:ctype==='line'?{color:'#2962ff',lineWidth:2}:{lineColor:'#2962ff',topColor:'#2962ff66',bottomColor:'#2962ff08',lineWidth:2};
-   this.alt=this.chart[ctype==='bar'?'addBarSeries':ctype==='line'?'addLineSeries':'addAreaSeries'](o)}
+  if(other){const o=ctype==='bar'?{upColor:cfg.up,downColor:cfg.dn,thinBars:false}:ctype==='line'||ctype==='linem'||ctype==='step'?{color:'#2962ff',lineWidth:2,pointMarkersVisible:ctype==='linem',lineType:ctype==='step'?1:0}:{lineColor:'#2962ff',topColor:'#2962ff66',bottomColor:'#2962ff08',lineWidth:2};
+   this.alt=this.chart[ctype==='bar'?'addBarSeries':ctype==='area'?'addAreaSeries':'addLineSeries'](o)}
   for(const k in this.subs)this.dropSub(k);
  }
  dropSub(k){const s=this.subs[k];if(s){s.chart.remove();s.el.remove();delete this.subs[k]}}
@@ -1012,7 +1012,7 @@ Object.assign(Pane.prototype,{
    const add=alert=>{const n=this.make('hline',a);n.alert=alert;this.draft=n;this.finish()},p=a.p.toFixed(this.prec??2);
    showMenu([[`在 ${p} 新增快訊`,()=>add(true)],[`在 ${p} 畫水平線`,()=>add(false)]],e.clientX-180,e.clientY)};
   this.chart.timeScale().subscribeVisibleLogicalRangeChange(()=>{this.axisHL();this.axisFormat()});
-  this.range=orig=>{
+  this.scaleRange=orig=>{
    const base=orig();if(!this.ax.lock||this.ax.mode==='log'||!base)return base;
    const ts=this.chart.timeScale(),r=ts.getVisibleLogicalRange();if(!r)return base;
    const spacing=ts.width()/(r.to-r.from),ph=this.wrap.clientHeight-ts.height(),half=this.ax.lock/spacing*ph*.7/2,mid=(base.priceRange.minValue+base.priceRange.maxValue)/2;
@@ -1026,7 +1026,9 @@ Object.assign(Pane.prototype,{
  ratio(){const ts=this.chart.timeScale(),r=ts.getVisibleLogicalRange(),ph=this.wrap.clientHeight-ts.height(),a=this.candle.coordinateToPrice(0),b=this.candle.coordinateToPrice(ph);return r&&a!=null&&b!=null?Math.abs(a-b)/ph*(ts.width()/(r.to-r.from)):null},
  sideApply(chart,series){
   const left=this.ax.left;
-  series.forEach(s=>{if(s.options().priceScaleId!=='v')s.applyOptions({priceScaleId:left?'left':'right'})});
+  const id=left?'left':'right';
+  series.forEach(s=>{const now=s.options().priceScaleId;if(now!=='v'&&now!==id&&(now!==undefined||left))s.applyOptions({priceScaleId:id})});
+  if(chart.kbSide===id)return;chart.kbSide=id;
   chart.applyOptions({leftPriceScale:{visible:left,minimumWidth:80},rightPriceScale:{visible:!left,minimumWidth:80}});
  },
  // 主圖上的所有指標線
@@ -1036,15 +1038,19 @@ Object.assign(Pane.prototype,{
   const main=[this.candle,this.alt].filter(Boolean),over=this.overlays(),other=ctype!=='candle'&&ctype!=='hollow';
   this.sideApply(this.chart,[...main,...over.map(o=>o[0])]);
   this.wrap.classList.toggle('lscale',a.left);this.el.classList.toggle('lscale',a.left);
+  const key=JSON.stringify(a),changed=key!==this.axKey;this.axKey=key;
+  if(changed){
   this.scale().applyOptions({mode:a.mode==='log'?1:0,invertScale:a.invert,alignLabels:a.align,minimumWidth:80});
   if(a.lock&&a.mode!=='log')this.scale().applyOptions({autoScale:true});
   if(!this.draft)this.chart.applyOptions({handleScale:{axisPressedMouseMove:{price:!a.lock,time:true}}});
+  }
   main.forEach(s=>{const shown=other?s===this.alt:s===this.candle;
-   s.applyOptions({lastValueVisible:shown&&a.lLast,priceLineVisible:shown&&a.gLast,title:shown&&a.lName?this.sym:'',autoscaleInfoProvider:this.range})});
+   s.applyOptions({lastValueVisible:shown&&a.lLast,priceLineVisible:shown&&a.gLast,title:shown&&a.lName?this.sym:'',autoscaleInfoProvider:this.scaleRange})});
   for(const[s,name]of over)s.applyOptions({lastValueVisible:a.lIndVal,title:a.lIndName?name:'',autoscaleInfoProvider:a.only||(a.lock&&a.mode!=='log')?noScale:undefined});
   for(const sub of Object.values(this.subs))this.sideApply(sub.chart,sub.series);
   for(const x of this.sx||[])if(x.sub)this.sideApply(x.sub.chart,x.series);
-  this.axisFormat(true);
+  if(a.lock&&!this.draft)this.chart.applyOptions({handleScale:{axisPressedMouseMove:{price:false,time:true}}});
+  this.axisFormat(changed);
  },
  // 百分比／基準100：只換算刻度文字（以畫面最左側收盤價為基準），圖形位置不變
  axisFormat(force){
@@ -1666,7 +1672,7 @@ addEventListener('pointerdown',e=>{if(!e.target.closest('.pop,#indBtn,#ctBtn'))$
 addEventListener('keydown',e=>{if(e.key==='Escape')$$('.pop').forEach(x=>x.classList.remove('show'))});
 $('#indBtn').onclick=()=>popup('#indPop','#indBtn');$('#ctBtn').onclick=()=>popup('#ctPop','#ctBtn');
 $('#edBtn').addEventListener('click',()=>$$('.pop').forEach(x=>x.classList.remove('show')));
-const CTYPES={candle:'K 線',hollow:'空心 K 線',bar:'美國線',line:'收盤折線',area:'面積圖'};
+const CTYPES={candle:'K 線',hollow:'空心 K 線',bar:'美國線',line:'線形圖',linem:'帶標記線',step:'階梯線',area:'面積圖'};
 function setCtype(k){ctype=k;store.set('ctype',k);panes.forEach(p=>{p.theme();p.render()});$$('#ctPop button').forEach(b=>b.classList.toggle('on',b.dataset.c===k))}
 for(const[k,n]of Object.entries(CTYPES)){const b=el('button',{textContent:n,onclick:()=>{setCtype(k);$('#ctPop').classList.remove('show')}});b.dataset.c=k;b.classList.toggle('on',k===ctype);$('#ctPop').append(b)}
 // 指標範本快捷圓鈕
@@ -1730,7 +1736,7 @@ async function pollWatch(){if(panel!=='watch')return;await Promise.all(watch.map
 setInterval(()=>{if(!document.hidden)pollWatch()},5000);
 $('#sWatch').onclick=()=>openPanel(panel==='watch'?'':'watch');
 $('#tradeBtn').onclick=()=>goTrade(pane_().sym);
-$('#saxisBtn').onclick=()=>window.open('saxis.html','_blank','noopener');
+$('#saxisBtn').onclick=()=>window.open('saxis.html#sym='+encodeURIComponent(pane_().sym),'_blank','noopener');
 $('#sAlert').onclick=$('#alBtn').onclick=()=>openPanel(panel==='alert'?'':'alert');
 $('#sTree').onclick=()=>openTree(pane_());$('#sCode').onclick=()=>$('#edBtn').click();$('#sTpl').onclick=openLayouts;
 $('#sHelp').onclick=()=>{const d=$('#dlg');d.oncancel=null;d.textContent='';d.append(el('h4',{textContent:'操作與快捷鍵'}),...['Shift＋點兩下：量尺','畫線時按住 Shift：水平／垂直／45°','雙擊畫線：設定；右鍵：選單','Ctrl+Z 復原、Ctrl+Y 重做','Ctrl+C / Ctrl+V 複製貼上、Delete 移除','Alt+T 趨勢線、Alt+H 水平線、Alt+F 斐波','Esc 取消目前工具'].map(t=>el('p',{textContent:t})),el('div',{className:'foot'},el('button',{textContent:'關閉',onclick:()=>d.close()})));d.showModal()};
@@ -1775,4 +1781,7 @@ setInterval(()=>{$('#clock').textContent=new Date(Date.now()+28800000).toISOStri
 layoutName(store.get('layoutName',''));quickBar();setActive(0);openPanel(panel);badge();
 (function loop(){requestAnimationFrame(loop);panes.forEach(p=>p.paint())})();
 setInterval(()=>panes.forEach(p=>{p.el.querySelector('.cd').textContent=p.replay?'':'收K '+countdown(p.tf);p.el.querySelector('.bar').dataset.title=p.sym+' · '+TFN[p.tf]}),500);
+// 由賽克斯開啟時帶入幣種：index.html#sym=BTC-USDT-SWAP
+const fromHash=()=>{const m=/^#sym=([A-Z0-9-]+)$/.exec(location.hash);if(m){setSymbol(m[1]);history.replaceState(null,'',location.pathname+location.search)}};
+addEventListener('hashchange',fromHash);fromHash();
 </script></body></html>
